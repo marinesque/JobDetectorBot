@@ -1,0 +1,6 @@
+﻿src/JobDetectorBot/.vs
+src/JobDetectorBot/Application/obj
+src/JobDetectorBot/Bot/bin
+src/JobDetectorBot/Bot/obj
+src/JobDetectorBot/Domain/obj
+src/JobDetectorBot/Infrastructure/obj
