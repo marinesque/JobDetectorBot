@@ -12,6 +12,7 @@ namespace BotService
     {
         private readonly ILogger<MessageHandler> _logger;
         private static readonly string _botImagesPath = Path.Combine(Directory.GetCurrentDirectory(), "BotImages");
+        private readonly UserRepository _userRepository;
 
         static MessageHandler()
         {
@@ -21,9 +22,10 @@ namespace BotService
             }
         }
 
-        public MessageHandler(ILogger<MessageHandler> logger)
+        public MessageHandler(ILogger<MessageHandler> logger, UserRepository userRepository)
         {
             _logger = logger;
+            _userRepository = userRepository;
         }
 
         public async Task HandleMessageAsync(ITelegramBotClient client, Update update, CancellationToken cancellationToken)
@@ -38,11 +40,52 @@ namespace BotService
                 // Уникальный идентификатор чата
                 var chatId = message.Chat.Id;
 
-                // Имя пользователя (если есть)
-                var username = message.From.Username ?? "anonymous";
+                // Никнейм пользователя (если есть)
+                var username = message.From.Username;
 
-                _logger.LogInformation($"Получено сообщение от {username} (User ID: {userId}, Chat ID: {chatId}): {message.Text}");
+                // Имя пользователя
+                var firstName = message.From.FirstName;
 
+                _logger.LogInformation($"Получено сообщение от {username ?? "anonymous"} (User ID: {userId}, Chat ID: {chatId}): {message.Text}");
+
+                if (message.Text is not null)
+                {
+                    if (message.Text.StartsWith("/start"))
+                    {
+                        await client.SendMessage(message.Chat.Id, "Введите ваш возраст:", cancellationToken: cancellationToken);
+                    }
+                    else if (int.TryParse(message.Text, out var age))
+                    {
+                        var user = new BotUser
+                        {
+                            UserId = userId,
+                            FirstName = firstName,
+                            Age = age
+                        };
+
+                        await _userRepository.AddOrUpdateUserAsync(user);
+                        await client.SendMessage(message.Chat.Id, $"Спасибо, {firstName}! Ваш возраст ({age}) сохранен.", cancellationToken: cancellationToken);
+                    }
+                    else if (message.Text.StartsWith("/phone"))
+                    {
+                        await client.SendMessage(message.Chat.Id, "Введите ваш телефон:", cancellationToken: cancellationToken);
+                    }
+                    else if (message.Text.StartsWith("+"))
+                    {
+                        var user = new BotUser
+                        {
+                            UserId = userId,
+                            FirstName = firstName,
+                            Phone = message.Text
+                        };
+
+                        await _userRepository.AddOrUpdateUserAsync(user);
+                        await client.SendMessage(message.Chat.Id, $"Спасибо, {firstName}! Ваш телефон ({message.Text}) сохранен.", cancellationToken: cancellationToken);
+                    }
+                }
+
+
+                //----------------------------------------------------------------------------------------------------//
                 // Текстовое сообщение
                 if (message.Text is not null)
                 {

@@ -12,7 +12,7 @@ internal class Program()
         Console.WriteLine($"Telegram Token: {telegramConfig["Token"]}");
 
         var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
-        builder.Services.AddDbContext<AppDbContext>(options =>
+        builder.Services.AddDbContext<BotDbContext>(options =>
             options.UseNpgsql(connectionString));
 
         builder.Services.Configure<BotOptions>(telegramConfig);
