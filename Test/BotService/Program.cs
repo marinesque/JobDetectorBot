@@ -1,8 +1,5 @@
 ﻿using BotService;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 internal class Program()
@@ -20,7 +17,6 @@ internal class Program()
 
         builder.Services.Configure<BotOptions>(telegramConfig);
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<BotOptions>>().Value);
-        builder.Services.AddScoped<BotUserRepository>();
         builder.Services.AddSingleton<IMessageHandler, MessageHandler>();
         builder.Services.AddHostedService<BotBackgroundService>();
 
