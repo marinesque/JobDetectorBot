@@ -1,4 +1,38 @@
-﻿src/JobDetectorBot/.vs
+# Игнорировать папки сборки и отладки
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+[Tt]est[Rr]esults/
+[Xx]64/
+[Xx]86/
+[Aa]rticles/
+
+# Игнорировать файлы пользовательских настроек
+*.user
+*.suo
+*.userprefs
+
+# Игнорировать файлы резервных копий
+*.bak
+*.tmp
+
+# Игнорировать папки пакетов NuGet
+[Nn]u[Gg]et/
+.nuget/
+packages/
+
+# Игнорировать файлы журналов и диагностики
+*.log
+*.sln.docstates
+
+# Игнорировать папки инструментов
+[Tt]ools/
+
+# Игнорировать папку .vs
+.vs/
+
+src/JobDetectorBot/.vs
 src/JobDetectorBot/Application/obj
 src/JobDetectorBot/Bot/bin
 src/JobDetectorBot/Bot/obj
