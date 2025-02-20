@@ -38,3 +38,12 @@ src/JobDetectorBot/Bot/bin
 src/JobDetectorBot/Bot/obj
 src/JobDetectorBot/Domain/obj
 src/JobDetectorBot/Infrastructure/obj
+src/JobDetectorBot/HeadHunterGrabber/bin
+src/JobDetectorBot/HeadHunterGrabber/obj
+src/JobDetectorBot/HeadHunterGrabber.BusinessLogic/bin
+src/JobDetectorBot/HeadHunterGrabber.BusinessLogic/obj
+src/JobDetectorBot/HeadHunterGrabber.DataAccess/bin
+src/JobDetectorBot/HeadHunterGrabber.Dto/bin
+src/JobDetectorBot/HeadHunterGrabber.Parser/obj
+src/JobDetectorBot/HeadHunterGrabber.Dto/obj
+src/JobDetectorBot/HeadHunterGrabber.DataAccess/obj

@@ -1,0 +1,6 @@
+@HeadHunterGrabber_HostAddress = http://localhost:5018
+
+GET {{HeadHunterGrabber_HostAddress}}/vacancy/
+Accept: application/json
+
+###
