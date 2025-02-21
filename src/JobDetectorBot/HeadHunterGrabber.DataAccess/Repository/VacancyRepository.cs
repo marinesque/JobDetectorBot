@@ -41,6 +41,11 @@ namespace HeadHunterGrabber.DataAccess.Repository
 			return await _context.Vacancies.ToListAsync();
 		}
 
+		public async Task<List<Vacancy>> GetAllByName(string name)
+		{
+			return await _context.Vacancies.Where(x => EF.Functions.Like(x.Name, "%name%")).ToListAsync();
+		}
+
 		public async Task<Vacancy?> GetByIdAsync(Guid id)
 		{
 			return await _context.Vacancies.FirstOrDefaultAsync(x => x.Id == id);
@@ -72,31 +77,5 @@ namespace HeadHunterGrabber.DataAccess.Repository
 				throw new ArgumentException($"Запись с Id {id} отсутствует");
 			}
 		}
-
-		//public async Task AddAsync(T entity)
-		//{
-		//	await _collection.InsertOneAsync(entity);
-		//}
-
-		//public async Task UpdateAsync(string id, T entity)
-		//{
-		//	await _collection.ReplaceOneAsync(Builders<T>.Filter.Eq("_id", new ObjectId(id)), entity);
-		//}
-
-		//public async Task DeleteAsync(string id)
-		//{
-		//	await _collection.DeleteOneAsync(Builders<T>.Filter.Eq("_id", new ObjectId(id)));
-		//}
-
-		//public async Task<List<T>> GetAllAsync()
-		//{
-		//	return await _collection.Find(new BsonDocument()).ToListAsync();
-		//}
-
-		//public async Task<T> GetByIdAsync(string id)
-		//{
-		//	return await _collection.Find(Builders<T>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefaultAsync();
-		//}
-
 	}
 }

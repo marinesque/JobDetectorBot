@@ -34,5 +34,11 @@ namespace HeadHunterGrabber.Controllers
 			return await _vacancyService.GetAllAsync();
 		}
 
+		[HttpGet("{name}", Name = "GetVacanciesFromSite")]
+		public async Task<List<VacancyResponse>> GetVacanciesFromSite(string name)
+		{
+			return await _vacancyService.FindVacancyByName(name);
+		}
+
 	}
 }

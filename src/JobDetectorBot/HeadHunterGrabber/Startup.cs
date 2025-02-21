@@ -1,9 +1,12 @@
 ﻿using HeadHunterGrabber.BusinessLogic;
 using HeadHunterGrabber.DataAccess.Model;
 using HeadHunterGrabber.DataAccess.Repository;
+using HeadHunterGrabber.Parser;
+using HeadHunterGrabber.Parser.Dto;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
+using System;
 
 namespace HeadHunterGrabber
 {
@@ -23,6 +26,7 @@ namespace HeadHunterGrabber
 			services.AddScoped(typeof(IRepository<Vacancy>), typeof(VacancyRepository));
 			services.AddTransient(typeof(IVacancyService), typeof(VacancyService));
 
+			services.AddTransient(typeof(IParser<SiteVacancy, SiteSearchParam>), typeof(SeleniumParser));
 		}
 
 		public void Configure(IApplicationBuilder app)

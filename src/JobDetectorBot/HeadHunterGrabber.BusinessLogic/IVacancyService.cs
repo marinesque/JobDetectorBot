@@ -18,5 +18,7 @@ namespace HeadHunterGrabber.BusinessLogic
 		Task UpdateAsync(Guid id, VacancyCreateRequest dto);
 
 		Task DeleteAsync(Guid id);
+
+		Task<List<VacancyResponse>> FindVacancyByName(string name);
 	}
 }

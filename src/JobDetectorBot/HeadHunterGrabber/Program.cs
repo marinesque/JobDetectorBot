@@ -19,9 +19,11 @@ namespace HeadHunterGrabber
 			builder.Services.AddEndpointsApiExplorer();
 			builder.Services.AddSwaggerGen();
 
-			var mongoDBSettings = builder.Configuration.GetSection("MongoDBSettings").Get<MongoDBSettings>();
-
 			builder.Services.Configure<MongoDBSettings>(builder.Configuration.GetSection("MongoDBSettings"));
+
+			builder.Services.Configure<HeadHunterSettings>(builder.Configuration.GetSection("HeadHunterSettings"));
+
+			var mongoDBSettings = builder.Configuration.GetSection("MongoDBSettings").Get<MongoDBSettings>();
 
 			builder.Services.AddDbContext<VacancyDbContext>(options =>
 				options.UseMongoDB(mongoDBSettings.ConnectionString ?? "", mongoDBSettings.DatabaseName ?? ""));
