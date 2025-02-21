@@ -1,6 +1,8 @@
 ﻿using HeadHunterGrabber.DataAccess.Model;
 using HeadHunterGrabber.DataAccess.Repository;
 using HeadHunterGrabber.Dto;
+using HeadHunterGrabber.Parser;
+using HeadHunterGrabber.Parser.Dto;
 using SharpCompress.Common;
 
 namespace HeadHunterGrabber.BusinessLogic
@@ -9,10 +11,13 @@ namespace HeadHunterGrabber.BusinessLogic
 	{
 
 		private readonly IRepository<Vacancy> _vacancyRepository;
+		private readonly IParser<SiteVacancy, SiteSearchParam> _parser;
 
-		public VacancyService(IRepository<Vacancy> vacancyRepository)
+		public VacancyService(IRepository<Vacancy> vacancyRepository,
+			IParser<SiteVacancy, SiteSearchParam> parser)
 		{
 			_vacancyRepository = vacancyRepository;
+			_parser = parser;
 		}
 
 		public async Task AddAsync(VacancyCreateRequest dto)
@@ -36,6 +41,29 @@ namespace HeadHunterGrabber.BusinessLogic
 		public async Task DeleteAsync(Guid id)
 		{
 			await _vacancyRepository.DeleteAsync(id);
+		}
+
+		public async Task<List<VacancyResponse>> FindVacancyByName(string name)
+		{
+			var result = _parser.GetVacancies(new SiteSearchParam { SearchString = name, SearchKeyWords = SearchKeyWords.Name });
+			//List<Vacancy> vacanciesInDb = await _vacancyRepository.GetAllByName(name);
+			//if(!vacanciesInDb.Any())
+			//{
+			//	//TODO: Идем в парсер и достаем все по названию
+			//}
+
+			//return vacanciesInDb.Select(x => new VacancyResponse
+			//{
+			//	Description = x.Description,
+			//	Job = x.Job,
+			//	Name = x.Name,
+			//	Salary = x.Salary,
+			//	Schedule = x.Schedule,
+			//	Type = x.Type,
+			//	WorkExperience = x.WorkExperience,
+			//	WorkHours = x.WorkHours
+			//}).ToList();
+			return new List<VacancyResponse>();
 		}
 
 		public async Task<List<VacancyResponse>> GetAllAsync()

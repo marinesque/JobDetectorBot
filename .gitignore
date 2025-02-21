@@ -47,3 +47,6 @@ src/JobDetectorBot/HeadHunterGrabber.Dto/bin
 src/JobDetectorBot/HeadHunterGrabber.Parser/obj
 src/JobDetectorBot/HeadHunterGrabber.Dto/obj
 src/JobDetectorBot/HeadHunterGrabber.DataAccess/obj
+src/JobDetectorBot/HeadHunterGrabber.Parser/bin
+src/JobDetectorBot/HeadHunterGrabber.Parser.Dto/bin
+src/JobDetectorBot/HeadHunterGrabber.Parser.Dto/obj

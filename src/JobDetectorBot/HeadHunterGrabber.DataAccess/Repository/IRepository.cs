@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HeadHunterGrabber.DataAccess.Model;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,5 +18,7 @@ namespace HeadHunterGrabber.DataAccess.Repository
 		Task UpdateAsync(Guid id, T entity);
 
 		Task DeleteAsync(Guid id);
+
+		Task<List<T>> GetAllByName(string name);
 	}
 }
