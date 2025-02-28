@@ -1,4 +1,4 @@
-﻿using BotService;
+﻿using Bot;
 using Microsoft.EntityFrameworkCore;
 
 public class BotDbContext : DbContext

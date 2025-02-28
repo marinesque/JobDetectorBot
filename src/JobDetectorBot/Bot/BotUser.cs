@@ -1,4 +1,4 @@
-﻿namespace BotService
+﻿namespace Bot
 {
     public class BotUser
     {

@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-namespace BotService
+namespace Bot
 {
 
     public class BotUserRepository

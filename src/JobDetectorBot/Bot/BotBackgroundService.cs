@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 
-namespace BotService
+namespace Bot
 {
     public class BotBackgroundService : BackgroundService
     {

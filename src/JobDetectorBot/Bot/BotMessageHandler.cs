@@ -2,18 +2,14 @@
 using Telegram.Bot;
 using Telegram.Bot.Types;
 
-namespace BotService
+namespace Bot
 {
-    public interface IMessageHandler
-    {
-        Task HandleMessageAsync(ITelegramBotClient client, Update update, CancellationToken cancellationToken);
-    }
-
-    public class MessageHandler : IMessageHandler
+    public class MessageHandler
     {
         private readonly ILogger<MessageHandler> _logger;
         private static readonly string _botImagesPath = Path.Combine(Directory.GetCurrentDirectory(), "BotImages");
         private readonly BotUserRepository _userRepository;
+        private readonly ITelegramBotClient _bot;
 
         static MessageHandler()
         {
@@ -23,13 +19,14 @@ namespace BotService
             }
         }
 
-        public MessageHandler(ILogger<MessageHandler> logger, BotUserRepository userRepository)
+        public MessageHandler(ILogger<MessageHandler> logger, BotUserRepository userRepository, ITelegramBotClient bot)
         {
             _logger = logger;
             _userRepository = userRepository;
+            _bot = bot;
         }
 
-        public async Task HandleMessageAsync(ITelegramBotClient client, Update update, CancellationToken cancellationToken)
+        public async Task HandleMessageAsync(Update update, CancellationToken cancellationToken)
         {
             try
             {
@@ -49,63 +46,46 @@ namespace BotService
 
                 _logger.LogInformation($"Получено сообщение от {username ?? "anonymous"} (User ID: {userId}, Chat ID: {chatId}): {message.Text}");
 
-                if (message.Text is not null)
+                // Получаем пользователя из базы данных
+                var user = await _userRepository.GetUserAsync(userId) ?? new BotUser { UserId = userId };
+
+                // Проверка тайм-аута сценария
+                if (user.State != UserState.None && (DateTime.UtcNow - user.LastUpdated) > TimeSpan.FromMinutes(1))
                 {
-                    if (message.Text.StartsWith("/start"))
-                    {
-                        await client.SendMessage(message.Chat.Id, "Введите ваш возраст:", cancellationToken: cancellationToken);
-                    }
-                    else if (int.TryParse(message.Text, out var age))
-                    {
-                        var user = new BotUser
-                        {
-                            UserId = userId,
-                            FirstName = firstName,
-                            Age = age
-                        };
-
-                        await _userRepository.AddOrUpdateUserAsync(user);
-                        await client.SendMessage(message.Chat.Id, $"Спасибо, {firstName}! Ваш возраст ({age}) сохранен.", cancellationToken: cancellationToken);
-                    }
-                    else if (message.Text.StartsWith("/phone"))
-                    {
-                        await client.SendMessage(message.Chat.Id, "Введите ваш телефон:", cancellationToken: cancellationToken);
-                    }
-                    else if (message.Text.StartsWith("+"))
-                    {
-                        var user = new BotUser
-                        {
-                            UserId = userId,
-                            FirstName = firstName,
-                            Phone = message.Text
-                        };
-
-                        await _userRepository.AddOrUpdateUserAsync(user);
-                        await client.SendMessage(message.Chat.Id, $"Спасибо, {firstName}! Ваш телефон ({message.Text}) сохранен.", cancellationToken: cancellationToken);
-                    }
+                    user.State = UserState.None; // Сброс состояния
+                    await _userRepository.AddOrUpdateUserAsync(user);
+                    await _bot.SendMessage(chatId, "Сценарий прерван из-за неактивности.", cancellationToken: cancellationToken);
+                    return;
                 }
 
-
-                //----------------------------------------------------------------------------------------------------//
-                // Текстовое сообщение
-                if (message.Text is not null)
+                // Обработка в зависимости от состояния пользователя
+                // Обработка в зависимости от состояния пользователя
+                switch (user.State)
                 {
-                    await client.SendMessage(message.Chat.Id, "Добрый вечер!", cancellationToken: cancellationToken);
+                    case UserState.AwaitingAge:
+                        await HandleAgeInput(message, user, cancellationToken);
+                        break;
+                    case UserState.AwaitingPhone:
+                        await HandlePhoneInput(message, user, cancellationToken);
+                        break;
+                    default:
+                        await HandleDefaultInput(message, user, cancellationToken);
+                        break;
                 }
 
                 // Документы
                 if (message.Document is not null)
                 {
-                    await SaveFileAsync(client, message.Document.FileId, message.Document.FileName, cancellationToken);
-                    await client.SendMessage(message.Chat.Id, $"Документ {message.Document.FileName} сохранен!", cancellationToken: cancellationToken);
+                    await SaveFileAsync(message.Document.FileId, message.Document.FileName, cancellationToken);
+                    await this._bot.SendMessage(message.Chat.Id, $"Документ {message.Document.FileName} сохранен!", cancellationToken: cancellationToken);
                 }
 
                 // Картинки и фото
                 if (message.Photo is not null)
                 {
                     var photo = message.Photo.Last(); // Может быть много фоток
-                    await SaveFileAsync(client, photo.FileId, $"photo_{photo.FileId}.jpg", cancellationToken);
-                    await client.SendMessage(message.Chat.Id, "Фото сохранено!", cancellationToken: cancellationToken);
+                    await SaveFileAsync(photo.FileId, $"photo_{photo.FileId}.jpg", cancellationToken);
+                    await this._bot.SendMessage(message.Chat.Id, "Фото сохранено!", cancellationToken: cancellationToken);
                 }
             }
             catch (Exception ex)
@@ -114,17 +94,111 @@ namespace BotService
             }
         }
 
-        private async Task SaveFileAsync(ITelegramBotClient client, string fileId, string fileName, CancellationToken cancellationToken)
+        private async Task HandleDefaultInput(Message message, BotUser user, CancellationToken cancellationToken)
         {
-            // Получаем информацию о файле
-            var file = await client.GetFile(fileId, cancellationToken);
+            if (message.Text is not { } messageText)
+                return;
 
-            // Формируем путь для сохранения
+            await (messageText.Split(' ')[0] switch
+            {
+                "/search " => StartScenario(message, user, cancellationToken),
+                "/cancel" => CancelScenario(message, user, cancellationToken),
+                _ => HandleDefaultMessage(message, cancellationToken)
+            });
+        }
+
+        private async Task HandleDefaultMessage(Message message, CancellationToken cancellationToken)
+        {
+            await _bot.SendMessage(message.Chat.Id, "Добрый вечер!", cancellationToken: cancellationToken);
+        }
+
+        private async Task StartScenario(Message message, BotUser user, CancellationToken cancellationToken)
+        {
+            user.State = UserState.AwaitingName; // Начало сценария
+            user.LastUpdated = DateTime.UtcNow; // Обновление времени последней активности
+            await _userRepository.AddOrUpdateUserAsync(user);
+
+            await _bot.SendMessage(message.Chat.Id, "Введите ваше имя:", cancellationToken: cancellationToken);
+        }
+
+        private async Task CancelScenario(Message message, BotUser user, CancellationToken cancellationToken)
+        {
+            user.State = UserState.None; // Сброс состояния
+            await _userRepository.AddOrUpdateUserAsync(user);
+
+            await _bot.SendMessage(message.Chat.Id, "Сценарий отменен.", cancellationToken: cancellationToken);
+        }
+
+        private async Task HandleAgeInput(Message message, BotUser user, CancellationToken cancellationToken)
+        {
+            if (message.Text == "/cancel")
+            {
+                await CancelScenario(message, user, cancellationToken);
+                return;
+            }
+
+            if (int.TryParse(message.Text, out var age))
+            {
+                user.Age = age;
+                user.State = UserState.AwaitingPhone; // Переход к следующему этапу
+                user.LastUpdated = DateTime.UtcNow; // Обновление времени последней активности
+                await _userRepository.AddOrUpdateUserAsync(user);
+                await _bot.SendMessage(
+                    message.Chat.Id,
+                    "Возраст сохранен!",
+                    cancellationToken: cancellationToken);
+
+                await _bot.SendMessage(
+                    message.Chat.Id,
+                    "Введите ваш телефон:",
+                    cancellationToken: cancellationToken);
+            }
+            else
+            {
+                await _bot.SendMessage(message.Chat.Id, "Пожалуйста, введите корректный возраст (число):", cancellationToken: cancellationToken);
+            }
+        }
+
+        private async Task HandlePhoneInput(Message message, BotUser user, CancellationToken cancellationToken)
+        {
+            if (message.Text == "/cancel")
+            {
+                await CancelScenario(message, user, cancellationToken);
+                return;
+            }
+
+            if (message.Text.StartsWith("+") && message.Text.Length > 5) // Простая валидация номера телефона
+            {
+                user.Phone = message.Text;
+                user.State = UserState.None; // Сценарий завершен
+                user.LastUpdated = DateTime.UtcNow; // Обновление времени последней активности
+                await _userRepository.AddOrUpdateUserAsync(user);
+                await _bot.SendMessage(
+                    message.Chat.Id,
+                    "Номер телефона сохранен!",
+                    cancellationToken: cancellationToken);
+
+                await _bot.SendMessage(
+                    message.Chat.Id,
+                    $"Спасибо, {user.FirstName}! Ваши данные сохранены.",
+                    cancellationToken: cancellationToken);
+            }
+            else
+            {
+                await _bot.SendMessage(
+                    message.Chat.Id,
+                    "Пожалуйста, введите корректный телефон (начинается с + и содержит более 5 символов).",
+                    cancellationToken: cancellationToken);
+            }
+        }
+
+        private async Task SaveFileAsync(string fileId, string fileName, CancellationToken cancellationToken)
+        {
+            var file = await _bot.GetFile(fileId, cancellationToken);
             var filePath = Path.Combine(_botImagesPath, fileName);
 
-            // Скачиваем и сохраняем файл
             await using var saveStream = new FileStream(filePath, FileMode.Create);
-            await client.DownloadFile(file.FilePath!, saveStream, cancellationToken);
+            await _bot.DownloadFile(file.FilePath!, saveStream, cancellationToken);
 
             _logger.LogInformation($"Файл сохранен в {filePath}");
         }
