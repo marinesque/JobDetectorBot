@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Bot/Dockerfile
+    container_name: bot
+    restart: always
+    depends_on:
+      - bot-postgres
+    environment:
+      - ConnectionStrings__PostgreSQL=Host=localhost;Database=botdb;Username=postgres;Password=271216
+      - Telegram__Token=8057264807:AAG9by6TzrbJQ4p2uLwnAI02slOr7S3sbiE
+    ports:
+      - "5000:80"
+    networks:
+      - bot-network
+
+  bot-postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_DB: botdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - bot-network
+
+volumes:
+  postgres_data:
+
+networks:
+  bot-network:
+    driver: bridge
