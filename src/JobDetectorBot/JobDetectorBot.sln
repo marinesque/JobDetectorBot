@@ -13,17 +13,19 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bot", "Bot\Bot.csproj", "{F
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SiteParser", "SiteParser", "{55B56910-B15E-43BA-B6A7-978C93C71ACD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeadHunterGrabber", "HeadHunterGrabber\HeadHunterGrabber.csproj", "{B5C0D636-CED7-40A7-89B3-4D098A77CE70}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VacancyService", "VacancyService\VacancyService.csproj", "{B5C0D636-CED7-40A7-89B3-4D098A77CE70}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeadHunterGrabber.DataAccess", "HeadHunterGrabber.DataAccess\HeadHunterGrabber.DataAccess.csproj", "{05B7AC2A-7E0D-41C5-9CE3-FFC37A9AA0D2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VacancyService.DataAccess", "VacancyService.DataAccess\VacancyService.DataAccess.csproj", "{05B7AC2A-7E0D-41C5-9CE3-FFC37A9AA0D2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeadHunterGrabber.BusinessLogic", "HeadHunterGrabber.BusinessLogic\HeadHunterGrabber.BusinessLogic.csproj", "{4F0197A0-4F8E-404A-9B70-AC81FD1779B7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VacancyService.BusinessLogic", "VacancyService.BusinessLogic\VacancyService.BusinessLogic.csproj", "{4F0197A0-4F8E-404A-9B70-AC81FD1779B7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeadHunterGrabber.Parser", "HeadHunterGrabber.Parser\HeadHunterGrabber.Parser.csproj", "{737F203E-D7F4-40F6-B064-1669EF37D237}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VacancyService.Parser", "VacancyService.Parser\VacancyService.Parser.csproj", "{737F203E-D7F4-40F6-B064-1669EF37D237}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeadHunterGrabber.Dto", "HeadHunterGrabber.Dto\HeadHunterGrabber.Dto.csproj", "{789C6369-5D46-4A86-AAFA-E286A0EEBF9D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VacancyService.Dto", "VacancyService.Dto\VacancyService.Dto.csproj", "{789C6369-5D46-4A86-AAFA-E286A0EEBF9D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeadHunterGrabber.Parser.Dto", "HeadHunterGrabber.Parser.Dto\HeadHunterGrabber.Parser.Dto.csproj", "{6B24DF6E-A880-4B31-AFCC-AABA257FDD38}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VacancyService.Parser.Dto", "VacancyService.Parser.Dto\VacancyService.Parser.Dto.csproj", "{6B24DF6E-A880-4B31-AFCC-AABA257FDD38}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VacancyService.Configuration", "VacancyService.Configuration\VacancyService.Configuration.csproj", "{DBB4F67C-DEEC-448A-AA26-5BCD95609768}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -71,6 +73,10 @@ Global
 		{6B24DF6E-A880-4B31-AFCC-AABA257FDD38}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6B24DF6E-A880-4B31-AFCC-AABA257FDD38}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6B24DF6E-A880-4B31-AFCC-AABA257FDD38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DBB4F67C-DEEC-448A-AA26-5BCD95609768}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBB4F67C-DEEC-448A-AA26-5BCD95609768}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DBB4F67C-DEEC-448A-AA26-5BCD95609768}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DBB4F67C-DEEC-448A-AA26-5BCD95609768}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -82,5 +88,6 @@ Global
 		{737F203E-D7F4-40F6-B064-1669EF37D237} = {55B56910-B15E-43BA-B6A7-978C93C71ACD}
 		{789C6369-5D46-4A86-AAFA-E286A0EEBF9D} = {55B56910-B15E-43BA-B6A7-978C93C71ACD}
 		{6B24DF6E-A880-4B31-AFCC-AABA257FDD38} = {55B56910-B15E-43BA-B6A7-978C93C71ACD}
+		{DBB4F67C-DEEC-448A-AA26-5BCD95609768} = {55B56910-B15E-43BA-B6A7-978C93C71ACD}
 	EndGlobalSection
 EndGlobal

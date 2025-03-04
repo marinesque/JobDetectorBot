@@ -50,3 +50,17 @@ src/JobDetectorBot/HeadHunterGrabber.DataAccess/obj
 src/JobDetectorBot/HeadHunterGrabber.Parser/bin
 src/JobDetectorBot/HeadHunterGrabber.Parser.Dto/bin
 src/JobDetectorBot/HeadHunterGrabber.Parser.Dto/obj
+src/JobDetectorBot/VacancyService.Parser.Dto/obj
+src/JobDetectorBot/VacancyService.Parser.Dto/bin
+src/JobDetectorBot/VacancyService/bin
+src/JobDetectorBot/VacancyService/obj
+src/JobDetectorBot/VacancyService.BusinessLogic/bin
+src/JobDetectorBot/VacancyService.BusinessLogic/obj
+src/JobDetectorBot/VacancyService.Configuration/bin
+src/JobDetectorBot/VacancyService.Configuration/obj
+src/JobDetectorBot/VacancyService.DataAccess/bin
+src/JobDetectorBot/VacancyService.DataAccess/obj
+src/JobDetectorBot/VacancyService.Dto/bin
+src/JobDetectorBot/VacancyService.Dto/obj
+src/JobDetectorBot/VacancyService.Parser/bin
+src/JobDetectorBot/VacancyService.Parser/obj
