@@ -204,22 +204,22 @@ namespace Bot.Application.Handlers
             {
                 string prompt when prompt.StartsWith("Введите регион:") => new ReplyKeyboardMarkup(new[]
                 {
-                    new[] { new KeyboardButton("Москва"), new KeyboardButton("Санкт-Петербург") },
-                    new[] { new KeyboardButton("Калининград"), new KeyboardButton("Уфа") },
-                    new[] { new KeyboardButton("Города нет в списке") },
-                    new[] { new KeyboardButton("Вернуться в меню") }
-                }),
+            new[] { new KeyboardButton("Москва"), new KeyboardButton("Санкт-Петербург") },
+            new[] { new KeyboardButton("Калининград"), new KeyboardButton("Уфа") },
+            new[] { new KeyboardButton("Свое значение") },
+            new[] { new KeyboardButton("Вернуться в меню") }
+        }),
                 string prompt when prompt.StartsWith("Введите должность:") => new ReplyKeyboardMarkup(new[]
                 {
-                    new[] { new KeyboardButton("Программист"), new KeyboardButton("Менеджер") },
-                    new[] { new KeyboardButton("Дизайнер"), new KeyboardButton("Аналитик") },
-                    new[] { new KeyboardButton("Должности нет в списке") },
-                    new[] { new KeyboardButton("Вернуться в меню") }
-                }),
+            new[] { new KeyboardButton("Грузчик"), new KeyboardButton("Директор") },
+            new[] { new KeyboardButton("Менеджер"), new KeyboardButton("Разработчик") },
+            new[] { new KeyboardButton("Свое значение") },
+            new[] { new KeyboardButton("Вернуться в меню") }
+        }),
                 _ => new ReplyKeyboardMarkup(new[]
                 {
-                    new[] { new KeyboardButton("Вернуться в меню") }
-                })
+            new[] { new KeyboardButton("Вернуться в меню") }
+        })
             };
 
             replyKeyboard.ResizeKeyboard = true;
@@ -232,14 +232,6 @@ namespace Bot.Application.Handlers
                 cancellationToken: cancellationToken);
         }
 
-        /// <summary>
-        /// Обработка ввода критериев
-        /// </summary>
-        /// <param name="client"></param>
-        /// <param name="message"></param>
-        /// <param name="user"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         private async Task HandleCriteriaInput(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
         {
             if (message.Text == "Вернуться в меню")
@@ -259,25 +251,21 @@ namespace Bot.Application.Handlers
 
             var step = _criteriaSteps[user.CurrentCriteriaStep];
 
-            // Обрабатываем специальные случаи (например, ввод города вручную)
-            if (step.Prompt.StartsWith("Введите регион:") && message.Text == "Города нет в списке")
+            if (message.Text == "Свое значение")
             {
                 await client.SendMessage(
                     chatId: message.Chat.Id,
-                    text: "Введите название вашего города:",
+                    text: "Введите значение:",
                     cancellationToken: cancellationToken);
                 return;
             }
 
-            // Устанавливаем значение в Criteria с помощью SetValue
             step.SetValue(user.Criteria, message.Text);
 
-            // Переходим к следующему шагу
             user.CurrentCriteriaStep++;
-            user.LastUpdated = DateTime.UtcNow; // Обновляем время
+            user.LastUpdated = DateTime.UtcNow;
             await _userRepository.AddOrUpdateUserAsync(user);
 
-            // Проверяем, завершен ли сценарий
             if (user.CurrentCriteriaStep >= _criteriaSteps.Count)
             {
                 user.State = UserState.None;
@@ -292,7 +280,6 @@ namespace Bot.Application.Handlers
                 return;
             }
 
-            // Отправляем следующий шаг
             await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
         }
 

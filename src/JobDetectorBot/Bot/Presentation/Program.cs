@@ -1,4 +1,5 @@
 ﻿using Bot;
+using Bot.Domain.DataAccess.Model;
 using Bot.Domain.DataAccess.Repositories;
 using Bot.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,8 @@ internal class Program()
         builder.Services.Configure<BotOptions>(telegramConfig);
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<BotOptions>>().Value);
         builder.Services.AddScoped<UserRepository>();
+        builder.Services.AddScoped<CriteriaStepRepository>();
+        builder.Services.AddTransient<DataSeeder>();
         builder.Services.AddScoped<IMessageHandler, MessageHandler>();
         builder.Services.AddHostedService<BotBackgroundService>();
 
@@ -60,11 +63,11 @@ internal class Program()
             {
                 throw new Exception("Не удалось подключиться к PostgreSQL.");
             }
+
+            var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
+            seeder.SeedDataAsync().GetAwaiter().GetResult();
         }
 
         host.Run();
-
-
-
     }
 }

@@ -1,25 +1,41 @@
-﻿using Bot.Domain.DataAccess.Model;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
-public class BotDbContext : DbContext
+namespace Bot.Domain.DataAccess.Model
 {
-    public DbSet<User> Users { get; set; }
-
-    public BotDbContext(DbContextOptions<BotDbContext> options) : base(options)
+    public class BotDbContext : DbContext
     {
-    }
+        public DbSet<User> Users { get; set; }
+        public DbSet<Criteria> Criteria { get; set; }
+        public DbSet<CriteriaStep> CriteriaSteps { get; set; }
+        public DbSet<CriteriaStepValue> CriteriaStepValues { get; set; }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        // Настройка уникальности UserId
-        modelBuilder.Entity<User>()
-            .HasIndex(u => u.TelegramId)
-            .IsUnique();
+        public BotDbContext(DbContextOptions<BotDbContext> options) : base(options)
+        {
+        }
 
-        // Настройка связи один-к-одному между User и Criteria
-        modelBuilder.Entity<User>()
-            .HasOne(u => u.Criteria)
-            .WithOne()
-            .HasForeignKey<Criteria>(c => c.UserId);
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.TelegramId)
+                .IsUnique();
+
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.Criteria)
+                .WithOne()
+                .HasForeignKey<Criteria>(c => c.UserId);
+
+            modelBuilder.Entity<CriteriaStep>()
+                .HasMany(cs => cs.CriteriaStepValues)
+                .WithOne(csv => csv.CriteriaStep)
+                .HasForeignKey(csv => csv.CriteriaStepId);
+
+            modelBuilder.Entity<CriteriaStep>()
+                .HasIndex(cs => cs.Name)
+                .IsUnique();
+
+            modelBuilder.Entity<CriteriaStepValue>()
+                .HasIndex(csv => new { csv.CriteriaStepId, csv.Prompt })
+                .IsUnique();
+        }
     }
 }

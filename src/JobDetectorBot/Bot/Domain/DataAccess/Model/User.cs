@@ -29,7 +29,7 @@ namespace Bot.Domain.DataAccess.Model
 
         [Column("CurrentCriteriaStep")]
         [Comment("Текущий шаг ввода критериев")]
-        public int CurrentCriteriaStep { get; set; } = -1;
+        public int CurrentCriteriaStep { get; set; } = 0;
 
         public Criteria? Criteria { get; set; }
     }
