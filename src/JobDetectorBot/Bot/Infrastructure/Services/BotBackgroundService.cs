@@ -58,6 +58,8 @@ namespace Bot.Infrastructure
             // Создаем область (scope) для использования Scoped-сервисов
             using (var scope = _scopeFactory.CreateScope())
             {
+                //var criteriaStepsActualizer = scope.ServiceProvider.GetRequiredService<ICriteriaStepsActualize>();
+                //await criteriaStepsActualizer.StartAsync(token);
                 var messageHandler = scope.ServiceProvider.GetRequiredService<IMessageHandler>();
                 await messageHandler.HandleMessageAsync(client, update, token);
             }

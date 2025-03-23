@@ -4,6 +4,7 @@
     {
         None,                // Нет активного сценария
         AwaitingCriteria,
-        AwaitingCriteriaEdit // Ожидание редактирования критериев
+        AwaitingCriteriaEdit, // Ожидание редактирования критериев,
+        AwaitingCustomValue
     }
 }

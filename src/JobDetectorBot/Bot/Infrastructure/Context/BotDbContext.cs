@@ -25,16 +25,16 @@ namespace Bot.Domain.DataAccess.Model
                 .HasForeignKey<Criteria>(c => c.UserId);
 
             modelBuilder.Entity<CriteriaStep>()
+                .HasIndex(cs => cs.Name)
+                .IsUnique(); // Уникальный индекс на поле Name
+
+            modelBuilder.Entity<CriteriaStep>()
                 .HasMany(cs => cs.CriteriaStepValues)
                 .WithOne(csv => csv.CriteriaStep)
                 .HasForeignKey(csv => csv.CriteriaStepId);
 
-            modelBuilder.Entity<CriteriaStep>()
-                .HasIndex(cs => cs.Name)
-                .IsUnique();
-
             modelBuilder.Entity<CriteriaStepValue>()
-                .HasIndex(csv => new { csv.CriteriaStepId, csv.Prompt })
+                .HasIndex(csv => new { csv.CriteriaStepId, csv.Value })
                 .IsUnique();
         }
     }

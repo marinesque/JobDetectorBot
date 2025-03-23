@@ -6,6 +6,7 @@ namespace Bot.Domain.DataAccess.Model
 {
     [Table("CriteriaStepValues", Schema = "public")]
     [Comment("Таблица значений шагов критериев")]
+    [Index(nameof(CriteriaStepId), nameof(Value), IsUnique = true)]
     public class CriteriaStepValue
     {
         [Key]
@@ -28,5 +29,9 @@ namespace Bot.Domain.DataAccess.Model
         [Column("Value")]
         [Comment("Значение шага критерия")]
         public string Value { get; set; }
+
+        [Column("OrderBy")]
+        [Comment("Порядок сортировки значения")]
+        public int? OrderBy { get; set; }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Bot.Domain.DataAccess.Model;
 using Bot.Domain.DataAccess.Repositories;
 using Bot.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -13,18 +14,10 @@ namespace Bot.Application.Handlers
         private readonly ILogger<MessageHandler> _logger;
         private static readonly string _botImagesPath = Path.Combine(Directory.GetCurrentDirectory(), "BotImages");
         private readonly UserRepository _userRepository;
+        private readonly CriteriaStepRepository _criteriaStepRepository;
+        private readonly BotDbContext _context;
 
-        private readonly List<(string Prompt, Action<Criteria, string> SetValue)> _criteriaSteps = new()
-        {
-            ("Введите регион:", (criteria, value) => criteria.Region = value),
-            ("Введите должность:", (criteria, value) => criteria.Post = value),
-            ("Введите зарплату:", (criteria, value) => criteria.Salary = decimal.TryParse(value, out var salary) ? salary : (decimal?)null),
-            ("Введите опыт работы:", (criteria, value) => criteria.Experience = int.TryParse(value, out var experience) ? experience : (int?)null),
-            ("Введите тип занятости:", (criteria, value) => criteria.WorkType = value),
-            ("Введите график работы:", (criteria, value) => criteria.Schedule = value),
-            ("Доступно ли для людей с инвалидностью? (да/нет):", (criteria, value) => criteria.Disability = value.ToLower() == "да"),
-            ("Доступно ли для детей с 14 лет? (да/нет):", (criteria, value) => criteria.ForChildren = value.ToLower() == "да")
-        };
+        private List<CriteriaStep> _criteriaSteps;
 
         static MessageHandler()
         {
@@ -34,11 +27,21 @@ namespace Bot.Application.Handlers
             }
         }
 
-        public MessageHandler(ILogger<MessageHandler> logger, UserRepository userRepository)
+        public MessageHandler(
+            ILogger<MessageHandler> logger,
+            UserRepository userRepository,
+            CriteriaStepRepository criteriaStepRepository,
+            BotDbContext context)
         {
             _logger = logger;
             _userRepository = userRepository;
+            _context = context;
+            _criteriaStepRepository = criteriaStepRepository;
         }
+
+        //private List<CriteriaStep> GetCriteriaSteps() => _criteriaStepsActualizer.GetCriteriaSteps();
+        private async Task LoadCriteriaStepsAsync() => this._criteriaSteps = await _criteriaStepRepository.GetAllCriteriaStepsAsync();
+
 
         public async Task HandleMessageAsync(ITelegramBotClient client, Update update, CancellationToken cancellationToken)
         {
@@ -55,20 +58,17 @@ namespace Bot.Application.Handlers
 
                 var user = await _userRepository.GetUserAsync(userId);
 
-                // Если пользователь новый
                 if (user == null)
                 {
                     user = new Domain.DataAccess.Model.User { TelegramId = userId };
                     await _userRepository.AddOrUpdateUserAsync(user);
 
-                    // Отправляем приветственное сообщение
                     await client.SendMessage(
                         chatId: chatId,
                         text: "Команда Безработных.NET приветствует Вас!" +
                               "Давайте найдем вакансию Вашей мечты вместе. Приступим!)",
                         cancellationToken: cancellationToken);
 
-                    // Показываем меню
                     await ShowMainMenu(client, chatId, cancellationToken);
                     return;
                 }
@@ -79,7 +79,6 @@ namespace Bot.Application.Handlers
                     return;
                 }
 
-                // Обработка в зависимости от состояния пользователя
                 switch (user.State)
                 {
                     case UserState.AwaitingCriteria:
@@ -108,8 +107,8 @@ namespace Bot.Application.Handlers
                 new[] { new KeyboardButton("Подписка") }
             })
             {
-                ResizeKeyboard = true, // Маленькие адаптивные кнопочки
-                OneTimeKeyboard = false // Скрыть клаву
+                ResizeKeyboard = true,
+                OneTimeKeyboard = true
             };
 
             await client.SendMessage(
@@ -118,14 +117,6 @@ namespace Bot.Application.Handlers
                 replyMarkup: replyKeyboard,
                 cancellationToken: cancellationToken);
         }
-
-        /// <summary>
-        /// Любое рандомное сообщение
-        /// </summary>
-        /// <param name="client"></param>
-        /// <param name="message"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         private async Task HandleDefaultInput(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
         {
             if (message.Text is not { } messageText)
@@ -149,81 +140,109 @@ namespace Bot.Application.Handlers
             }
         }
 
-        /// <summary>
-        /// Сценарий ввода критериев
-        /// </summary>
-        /// <param name="client"></param>
-        /// <param name="message"></param>
-        /// <param name="user"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         private async Task StartScenario(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
         {
+            if (_criteriaSteps == null || !_criteriaSteps.Any())
+            {
+                await LoadCriteriaStepsAsync();
+            }
+
             user.State = UserState.AwaitingCriteria; // Вводим критерии
             user.CurrentCriteriaStep = 0; // Шаг
+            user.CurrentCriteriaStepValueIndex = 0; // Страница ответа
             user.LastUpdated = DateTime.UtcNow;
             await _userRepository.AddOrUpdateUserAsync(user);
 
             await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
         }
 
-        /// <summary>
-        /// Окончание сценария
-        /// </summary>
-        /// <param name="client"></param>
-        /// <param name="message"></param>
-        /// <param name="user"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         private async Task CancelScenario(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
         {
-            user.State = UserState.None;
-            await _userRepository.AddOrUpdateUserAsync(user);
+            await ResetUserStateAsync(user);
 
             await client.SendMessage(
                 chatId: message.Chat.Id,
                 text: "Сценарий отменен.",
-                replyMarkup: new ReplyKeyboardRemove(), // Скрываем клавиатуру, если закончили
+                replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
 
         }
 
-        /// <summary>
-        /// Шаг сценария в виде кнопок.
-        /// </summary>
-        /// <param name="client"></param>
-        /// <param name="chatId"></param>
-        /// <param name="user"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         private async Task SendStepMessage(ITelegramBotClient client, long chatId, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
         {
             var step = _criteriaSteps[user.CurrentCriteriaStep];
 
-            var replyKeyboard = step.Prompt switch
-            {
-                string prompt when prompt.StartsWith("Введите регион:") => new ReplyKeyboardMarkup(new[]
-                {
-            new[] { new KeyboardButton("Москва"), new KeyboardButton("Санкт-Петербург") },
-            new[] { new KeyboardButton("Калининград"), new KeyboardButton("Уфа") },
-            new[] { new KeyboardButton("Свое значение") },
-            new[] { new KeyboardButton("Вернуться в меню") }
-        }),
-                string prompt when prompt.StartsWith("Введите должность:") => new ReplyKeyboardMarkup(new[]
-                {
-            new[] { new KeyboardButton("Грузчик"), new KeyboardButton("Директор") },
-            new[] { new KeyboardButton("Менеджер"), new KeyboardButton("Разработчик") },
-            new[] { new KeyboardButton("Свое значение") },
-            new[] { new KeyboardButton("Вернуться в меню") }
-        }),
-                _ => new ReplyKeyboardMarkup(new[]
-                {
-            new[] { new KeyboardButton("Вернуться в меню") }
-        })
-            };
+            var criteriaStep = await _context.CriteriaSteps
+                .Include(cs => cs.CriteriaStepValues)
+                .FirstOrDefaultAsync(cs => cs.Prompt == step.Prompt);
 
-            replyKeyboard.ResizeKeyboard = true;
-            replyKeyboard.OneTimeKeyboard = true;
+            if (criteriaStep == null)
+            {
+                await client.SendMessage(
+                    chatId,
+                    "Ошибка: шаг сценария не найден.",
+                    cancellationToken: cancellationToken);
+                return;
+            }
+
+            var sortedValues = criteriaStep.CriteriaStepValues
+                .OrderBy(csv => csv.OrderBy.HasValue ? 0 : 1) // Сначала значения с заполненным OrderBy
+                .ThenBy(csv => csv.OrderBy) // Затем сортируем по OrderBy
+                .ThenBy(csv => ConvertValue(csv.Value, criteriaStep.Type)) // Затем по Value, сконвертированному в нужный тип
+                .Skip(user.CurrentCriteriaStepValueIndex)
+                .Take(4)
+                .ToList();
+
+            var replyKeyboardButtonList = new List<KeyboardButton[]>();
+            var row = new List<KeyboardButton>();
+
+            foreach (var value in sortedValues)
+            {
+                row.Add(new KeyboardButton(value.Prompt)); // Используем Prompt для отображения
+                if (row.Count == 2)
+                {
+                    replyKeyboardButtonList.Add(row.ToArray());
+                    row.Clear();
+                }
+            }
+
+            if (row.Any())
+            {
+                replyKeyboardButtonList.Add(row.ToArray());
+            }
+
+            if (criteriaStep.CriteriaStepValues.Count > 4)
+            {
+                var navigationRow = new List<KeyboardButton>();
+
+                if (user.CurrentCriteriaStepValueIndex > 0)
+                {
+                    navigationRow.Add(new KeyboardButton("Назад"));
+                }
+
+                if (user.CurrentCriteriaStepValueIndex + 4 < criteriaStep.CriteriaStepValues.Count)
+                {
+                    navigationRow.Add(new KeyboardButton("Далее"));
+                }
+
+                if (navigationRow.Any())
+                {
+                    replyKeyboardButtonList.Add(navigationRow.ToArray());
+                }
+            }
+
+            if (criteriaStep.IsCustom)
+            {
+                replyKeyboardButtonList.Add(new[] { new KeyboardButton("Свое значение") });
+            }
+
+            replyKeyboardButtonList.Add(new[] { new KeyboardButton("Вернуться в меню") });
+
+            var replyKeyboard = new ReplyKeyboardMarkup(replyKeyboardButtonList)
+            {
+                ResizeKeyboard = true,
+                OneTimeKeyboard = true
+            };
 
             await client.SendMessage(
                 chatId: chatId,
@@ -232,12 +251,102 @@ namespace Bot.Application.Handlers
                 cancellationToken: cancellationToken);
         }
 
+        // Метод для конвертации значения в нужный тип
+        private object ConvertValue(string value, string type)
+        {
+            return type.ToLower() switch
+            {
+                "string" => value,
+                "int" => int.TryParse(value, out var intValue) ? intValue : throw new ArgumentException($"Невозможно преобразовать '{value}' в int."),
+                "decimal" => decimal.TryParse(value, out var decimalValue) ? decimalValue : throw new ArgumentException($"Невозможно преобразовать '{value}' в decimal."),
+                "boolean" => value.ToLower() switch
+                {
+                    "да" or "true" => true,
+                    "нет" or "false" => false,
+                    _ => throw new ArgumentException($"Невозможно преобразовать '{value}' в bool.")
+                },
+                _ => throw new ArgumentException($"Неизвестный тип данных: {type}")
+            };
+        }
+
         private async Task HandleCriteriaInput(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
         {
+            if (_criteriaSteps == null || !_criteriaSteps.Any())
+            {
+                await LoadCriteriaStepsAsync();
+            }
+
             if (message.Text == "Вернуться в меню")
             {
                 await CancelScenario(client, message, user, cancellationToken);
                 await ShowMainMenu(client, message.Chat.Id, cancellationToken);
+                return;
+            }
+
+            if (message.Text == "Назад")
+            {
+                user.CurrentCriteriaStepValueIndex = Math.Max(0, user.CurrentCriteriaStepValueIndex - 4);
+                await _userRepository.AddOrUpdateUserAsync(user);
+                await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+                return;
+            }
+
+            if (message.Text == "Далее")
+            {
+                user.CurrentCriteriaStepValueIndex += 4;
+                await _userRepository.AddOrUpdateUserAsync(user);
+                await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+                return;
+            }
+
+            if (message.Text == "Свое значение")
+            {
+                if (_criteriaSteps[user.CurrentCriteriaStep].IsCustom)
+                {
+                    await client.SendMessage(
+                        chatId: message.Chat.Id,
+                        text: "Введите свое значение:",
+                        replyMarkup: new ReplyKeyboardRemove(),
+                        cancellationToken: cancellationToken);
+                    return;
+                }
+                else
+                {
+                    await client.SendMessage(
+                        chatId: message.Chat.Id,
+                        text: "Ввод своего значения недоступен для этого шага.",
+                        cancellationToken: cancellationToken);
+                    await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+                    return;
+                }
+            }
+
+            var step = _criteriaSteps[user.CurrentCriteriaStep];
+
+            var criteriaStep = await _context.CriteriaSteps
+                .Include(cs => cs.CriteriaStepValues)
+                .FirstOrDefaultAsync(cs => cs.Id == step.Id);
+
+            if (criteriaStep == null)
+            {
+                await client.SendMessage(
+                    chatId: message.Chat.Id,
+                    text: "Ошибка: шаг сценария не найден.",
+                    cancellationToken: cancellationToken);
+                return;
+            }
+
+            var selectedValue = criteriaStep.CriteriaStepValues
+                .FirstOrDefault(csv => csv.Prompt == message.Text);
+
+            if (selectedValue == null && !step.IsCustom)
+            {
+                // Если значение не найдено и IsCustom = false, повторяем запрос
+                await client.SendMessage(
+                    chatId: message.Chat.Id,
+                    text: "Пожалуйста, выберите значение из предложенных.",
+                    cancellationToken: cancellationToken);
+                await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
                 return;
             }
 
@@ -249,26 +358,16 @@ namespace Bot.Application.Handlers
                 };
             }
 
-            var step = _criteriaSteps[user.CurrentCriteriaStep];
-
-            if (message.Text == "Свое значение")
-            {
-                await client.SendMessage(
-                    chatId: message.Chat.Id,
-                    text: "Введите значение:",
-                    cancellationToken: cancellationToken);
-                return;
-            }
-
-            step.SetValue(user.Criteria, message.Text);
+            SetCriteriaValue(user.Criteria, step, selectedValue?.Value ?? message.Text);
 
             user.CurrentCriteriaStep++;
+            user.CurrentCriteriaStepValueIndex = 0;
             user.LastUpdated = DateTime.UtcNow;
             await _userRepository.AddOrUpdateUserAsync(user);
 
             if (user.CurrentCriteriaStep >= _criteriaSteps.Count)
             {
-                user.State = UserState.None;
+                await ResetUserStateAsync(user);
 
                 await client.SendMessage(
                     chatId: message.Chat.Id,
@@ -276,11 +375,39 @@ namespace Bot.Application.Handlers
                     cancellationToken: cancellationToken);
 
                 await ShowMainMenu(client, message.Chat.Id, cancellationToken);
-
                 return;
             }
 
             await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+        }
+
+        private async Task ResetUserStateAsync(Domain.DataAccess.Model.User user)
+        {
+            // Обнуляем состояние пользователя
+            user.State = UserState.None;
+            user.CurrentCriteriaStep = 0;
+            user.CurrentCriteriaStepValueIndex = 0;
+
+            await _userRepository.AddOrUpdateUserAsync(user);
+        }
+
+        private void SetCriteriaValue(Criteria criteria, CriteriaStep step, string value)
+        {
+            var property = typeof(Criteria).GetProperty(step.Name);
+            if (property == null)
+            {
+                throw new ArgumentException($"Неизвестный шаг сценария: {step.Name}");
+            }
+
+            try
+            {
+                var parsedValue = ConvertValue(value, step.Type); // ConvertValue для конвертации значения
+                property.SetValue(criteria, parsedValue);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new ArgumentException($"Ошибка при установке значения для шага '{step.Name}': {ex.Message}");
+            }
         }
 
         private async Task HandleSubscription(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
@@ -321,14 +448,6 @@ namespace Bot.Application.Handlers
             await ShowMainMenu(client, message.Chat.Id, cancellationToken);
         }
 
-        /// <summary>
-        /// Обработка редактирования критериев
-        /// </summary>
-        /// <param name="client"></param>
-        /// <param name="message"></param>
-        /// <param name="user"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         private async Task HandleCriteriaEdit(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
         {
             if (int.TryParse(message.Text, out var stepNumber) && stepNumber >= 1 && stepNumber <= _criteriaSteps.Count)

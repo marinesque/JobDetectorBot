@@ -3,6 +3,7 @@ using System;
 using Bot.Domain.DataAccess.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bot.Migrations
 {
     [DbContext(typeof(BotDbContext))]
-    partial class BotDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250316170126_AddCurrentCriteriaStepValueIndex")]
+    partial class AddCurrentCriteriaStepValueIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -120,12 +123,6 @@ namespace Bot.Migrations
                         .HasColumnName("Prompt")
                         .HasComment("Отображаемое значение для шага");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("Type")
-                        .HasComment("Тип значения");
-
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
@@ -152,11 +149,6 @@ namespace Bot.Migrations
                         .HasColumnName("CriteriaStepId")
                         .HasComment("Идентификатор шага критерия");
 
-                    b.Property<int?>("OrderBy")
-                        .HasColumnType("integer")
-                        .HasColumnName("OrderBy")
-                        .HasComment("Порядок сортировки значения");
-
                     b.Property<string>("Prompt")
                         .IsRequired()
                         .HasColumnType("text")
@@ -171,7 +163,7 @@ namespace Bot.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CriteriaStepId", "Value")
+                    b.HasIndex("CriteriaStepId", "Prompt")
                         .IsUnique();
 
                     b.ToTable("CriteriaStepValues", "public", t =>

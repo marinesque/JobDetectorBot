@@ -2,6 +2,7 @@
 using Bot.Domain.DataAccess.Model;
 using Bot.Domain.DataAccess.Repositories;
 using Bot.Infrastructure;
+using Bot.Infrastructure.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +36,7 @@ internal class Program()
         builder.Services.AddScoped<CriteriaStepRepository>();
         builder.Services.AddTransient<DataSeeder>();
         builder.Services.AddScoped<IMessageHandler, MessageHandler>();
+        builder.Services.AddScoped<ICriteriaStepsActualize, CriteriaStepsActualize>();
         builder.Services.AddHostedService<BotBackgroundService>();
 
         var host = builder.Build();

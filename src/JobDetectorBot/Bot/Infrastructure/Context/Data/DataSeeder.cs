@@ -26,7 +26,47 @@ public class DataSeeder
 
         foreach (var step in seedData.CriteriaSteps)
         {
-            await _criteriaStepRepository.AddOrUpdateCriteriaStepAsync(step);
+            // Обновляем или добавляем CriteriaStep
+            var existingStep = await _criteriaStepRepository.GetCriteriaStepByNameAsync(step.Name);
+            if (existingStep != null)
+            {
+                // Обновляем поля шага
+                existingStep.Prompt = step.Prompt;
+                existingStep.IsCustom = step.IsCustom;
+                existingStep.OrderBy = step.OrderBy;
+                existingStep.Type = step.Type;
+
+                // Обновляем или добавляем значения
+                foreach (var value in step.CriteriaStepValues)
+                {
+                    var existingValue = existingStep.CriteriaStepValues
+                        .FirstOrDefault(csv => csv.CriteriaStepId == existingStep.Id && csv.Value == value.Value);
+
+                    if (existingValue != null)
+                    {
+                        existingValue.Prompt = value.Prompt;
+                        existingValue.OrderBy = value.OrderBy;
+                    }
+                    else
+                    {
+                        // Добавляем новое значение
+                        existingStep.CriteriaStepValues.Add(new CriteriaStepValue
+                        {
+                            CriteriaStepId = existingStep.Id,
+                            Prompt = value.Prompt,
+                            Value = value.Value,
+                            OrderBy = value.OrderBy
+                        });
+                    }
+                }
+            }
+            else
+            {
+                // Добавляем новый шаг
+                await _criteriaStepRepository.AddOrUpdateCriteriaStepAsync(step);
+            }
+
+            await _criteriaStepRepository.SaveChangesAsync();
         }
     }
 

@@ -23,6 +23,7 @@ namespace Bot.Domain.DataAccess.Repositories
                 existingStep.Prompt = criteriaStep.Prompt;
                 existingStep.IsCustom = criteriaStep.IsCustom;
                 existingStep.OrderBy = criteriaStep.OrderBy;
+                existingStep.Type = criteriaStep.Type;
 
                 foreach (var value in criteriaStep.CriteriaStepValues)
                 {
@@ -51,6 +52,7 @@ namespace Bot.Domain.DataAccess.Repositories
         {
             return await _context.CriteriaSteps
                 .Include(cs => cs.CriteriaStepValues)
+                .OrderBy(cs => cs.OrderBy)
                 .ToListAsync();
         }
 
@@ -62,6 +64,17 @@ namespace Bot.Domain.DataAccess.Repositories
                 _context.CriteriaSteps.Remove(criteriaStep);
                 await _context.SaveChangesAsync();
             }
+        }
+        public async Task<CriteriaStep> GetCriteriaStepByNameAsync(string name)
+        {
+            return await _context.CriteriaSteps
+                .Include(cs => cs.CriteriaStepValues)
+                .FirstOrDefaultAsync(cs => cs.Name == name);
+        }
+
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
         }
     }
 }
