@@ -12,13 +12,13 @@ namespace Bot.Domain.DataAccess.Repositories
             _context = context;
         }
 
-        // Получить пользователя по Telegram ID
         public async Task<User> GetUserAsync(long telegramId)
         {
-            return await _context.Users.FirstOrDefaultAsync(u => u.TelegramId == telegramId);
+            return await _context.Users
+                .Include(u => u.Criteria)
+                .FirstOrDefaultAsync(u => u.TelegramId == telegramId);
         }
 
-        // Добавить или обновить пользователя
         public async Task AddOrUpdateUserAsync(User user)
         {
             var existingUser = await _context.Users
@@ -27,20 +27,18 @@ namespace Bot.Domain.DataAccess.Repositories
 
             if (existingUser == null)
             {
-                // Если пользователь не существует, добавляем его
                 _context.Users.Add(user);
             }
             else
             {
-                // Если пользователь существует, обновляем его данные
                 _context.Entry(existingUser).CurrentValues.SetValues(user);
 
-                // Обновляем критерии, если они есть
                 if (user.Criteria != null)
                 {
                     if (existingUser.Criteria == null)
                     {
                         existingUser.Criteria = user.Criteria;
+                        existingUser.Criteria.UserId = existingUser.Id;
                     }
                     else
                     {

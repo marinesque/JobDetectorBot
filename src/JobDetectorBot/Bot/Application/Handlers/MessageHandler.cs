@@ -60,7 +60,11 @@ namespace Bot.Application.Handlers
 
                 if (user == null)
                 {
-                    user = new Domain.DataAccess.Model.User { TelegramId = userId };
+                    user = new Domain.DataAccess.Model.User
+                    {
+                        TelegramId = userId,
+                        Criteria = new Criteria()
+                    };
                     await _userRepository.AddOrUpdateUserAsync(user);
 
                     await client.SendMessage(
@@ -356,6 +360,14 @@ namespace Bot.Application.Handlers
                 {
                     UserId = user.Id
                 };
+                user.Criteria.Region = "";
+                user.Criteria.Post = "";
+                user.Criteria.Salary = 0;
+                user.Criteria.Experience = 0;
+                user.Criteria.WorkType = "";
+                user.Criteria.Schedule = "";
+                user.Criteria.Disability = false;
+                user.Criteria.ForChildren = false;
             }
 
             SetCriteriaValue(user.Criteria, step, selectedValue?.Value ?? message.Text);
