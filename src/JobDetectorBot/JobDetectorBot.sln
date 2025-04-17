@@ -27,6 +27,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VacancyService.Parser.Dto",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VacancyService.Configuration", "VacancyService.Configuration\VacancyService.Configuration.csproj", "{DBB4F67C-DEEC-448A-AA26-5BCD95609768}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VacancyService.HeadHunterApiClient", "VacancyService.HeadHunterApiClient\VacancyService.HeadHunterApiClient.csproj", "{5423502A-1BAA-4678-B96D-1024BE68999F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VacancyService.HeadHunterApiClient.Dto", "VacancyService.HeadHunterApiClient.Dto\VacancyService.HeadHunterApiClient.Dto.csproj", "{47957677-39DF-4CDE-BE52-50B87764DDBF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -77,6 +81,14 @@ Global
 		{DBB4F67C-DEEC-448A-AA26-5BCD95609768}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DBB4F67C-DEEC-448A-AA26-5BCD95609768}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DBB4F67C-DEEC-448A-AA26-5BCD95609768}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5423502A-1BAA-4678-B96D-1024BE68999F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5423502A-1BAA-4678-B96D-1024BE68999F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5423502A-1BAA-4678-B96D-1024BE68999F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5423502A-1BAA-4678-B96D-1024BE68999F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{47957677-39DF-4CDE-BE52-50B87764DDBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{47957677-39DF-4CDE-BE52-50B87764DDBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{47957677-39DF-4CDE-BE52-50B87764DDBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{47957677-39DF-4CDE-BE52-50B87764DDBF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -89,5 +101,7 @@ Global
 		{789C6369-5D46-4A86-AAFA-E286A0EEBF9D} = {55B56910-B15E-43BA-B6A7-978C93C71ACD}
 		{6B24DF6E-A880-4B31-AFCC-AABA257FDD38} = {55B56910-B15E-43BA-B6A7-978C93C71ACD}
 		{DBB4F67C-DEEC-448A-AA26-5BCD95609768} = {55B56910-B15E-43BA-B6A7-978C93C71ACD}
+		{5423502A-1BAA-4678-B96D-1024BE68999F} = {55B56910-B15E-43BA-B6A7-978C93C71ACD}
+		{47957677-39DF-4CDE-BE52-50B87764DDBF} = {55B56910-B15E-43BA-B6A7-978C93C71ACD}
 	EndGlobalSection
 EndGlobal

@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\VacancyService.DataAccess\VacancyService.DataAccess.csproj" />
     <ProjectReference Include="..\VacancyService.Dto\VacancyService.Dto.csproj" />
+    <ProjectReference Include="..\VacancyService.HeadHunterApiClient\VacancyService.HeadHunterApiClient.csproj" />
     <ProjectReference Include="..\VacancyService.Parser\VacancyService.Parser.csproj" />
   </ItemGroup>
 

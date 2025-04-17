@@ -64,3 +64,7 @@ src/JobDetectorBot/VacancyService.Dto/bin
 src/JobDetectorBot/VacancyService.Dto/obj
 src/JobDetectorBot/VacancyService.Parser/bin
 src/JobDetectorBot/VacancyService.Parser/obj
+src/JobDetectorBot/VacancyService.HeadHunterApiClient/bin
+src/JobDetectorBot/VacancyService.HeadHunterApiClient/obj
+src/JobDetectorBot/VacancyService.HeadHunterApiClient.Dto/bin
+src/JobDetectorBot/VacancyService.HeadHunterApiClient.Dto/obj

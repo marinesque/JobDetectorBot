@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
 using System;
+using VacancyService.HeadHunterApiClient;
 
 namespace VacancyService
 {
@@ -23,7 +24,7 @@ namespace VacancyService
 
 		public void ConfigureServices(IServiceCollection services)
 		{
-		
+			services.AddHttpClient();
 			services.AddScoped(typeof(IRepository<Vacancy>), typeof(VacancyRepository));
 			services.AddTransient(typeof(IVacancyDataService), typeof(VacancyDataService));
 
@@ -31,6 +32,8 @@ namespace VacancyService
 
 			//services.AddTransient(typeof(IParser<SiteVacancy, SiteSearchParam>), typeof(SeleniumParser));
 			services.AddTransient(typeof(IParser<SiteVacancy, SiteSearchParam>), typeof(HtmlAgilityParser));
+
+			services.AddTransient(typeof(IServiceClient), typeof(ServiceClient));
 		}
 
 		public void Configure(IApplicationBuilder app)

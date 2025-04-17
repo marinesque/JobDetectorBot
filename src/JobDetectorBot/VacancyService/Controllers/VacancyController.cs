@@ -22,22 +22,38 @@ namespace VacancyService.Controllers
 			_vacancyService = vacancyService;
 		}
 
-		[HttpPost(Name = "InsertVacancy")]
-		public async Task InsertVacancy(VacancyCreateRequest vacancy)
-		{
-			await _vacancyService.AddAsync(vacancy);
-		}
+		//[HttpPost(Name = "InsertVacancy")]
+		//public async Task InsertVacancy(VacancyCreateRequest vacancy)
+		//{
+		//	await _vacancyService.AddAsync(vacancy);
+		//}
 
-		[HttpGet(Name = "GetVacancies")]
-		public async Task<List<VacancyResponse>> GetVacancies()
-		{
-			return await _vacancyService.GetAllAsync();
-		}
+		//[HttpGet(Name = "GetVacancies")]
+		//public async Task<List<VacancyResponse>> GetVacancies()
+		//{
+		//	return await _vacancyService.GetAllAsync();
+		//}
 
-		[HttpGet("{search}", Name = "GetVacanciesFromSite")]
-		public async Task<List<VacancyResponse>> GetVacanciesFromSite(string search, bool name, bool company, bool description)
+		[HttpGet("{search}", Name = "GetVacancies")]
+		public async Task<List<VacancyResponse>> GetVacancies(
+			string search, 
+			string? experience, 
+			string? employment,
+			string? schedule,
+			string? salaryRangeFrequency,
+			int? salary
+			)
 		{
-			return await _vacancyService.FindVacancy(search, name, company, description);
+			var searchOptions = new VacancySearchOptions
+			{
+				Employment = employment,
+				Experience = experience,
+				Salary = salary,
+				SalaryRangeFrequency = salaryRangeFrequency,
+				Schedule = schedule
+			};
+
+			return await _vacancyService.FindVacancy(search, searchOptions);
 		}
 
 	}

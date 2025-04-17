@@ -15,14 +15,12 @@ namespace VacancyService.DataAccess.Repository
 
 		Task AddAsync(T entity);
 
-		Task BulkInsertAsync(List<T> entity);
+		Task BulkInsertAsync(List<T> entities);
 
 		Task UpdateAsync(Guid id, T entity);
 
 		Task DeleteAsync(Guid id);
 
-		Task<List<T>> GetAllBySearchString(string search);
-
-		Task<List<T>> GetAllBySearchString(string search, SearchKeys keys);
+		Task<List<T>> GetAllBySearchString(string search, DbSearchOptions dbSearchOptions);
 	}
 }
