@@ -8,12 +8,8 @@ namespace VacancyService.BusinessLogic
 
 		Task<VacancyResponse> GetByIdAsync(Guid id);
 
-		Task AddAsync(VacancyCreateRequest dto);
-
-		Task UpdateAsync(Guid id, VacancyCreateRequest dto);
-
 		Task DeleteAsync(Guid id);
 
-		Task<List<VacancyResponse>> FindVacancy(string search, bool name, bool company, bool description);
+		Task<List<VacancyResponse>> FindVacancy(string search, VacancySearchOptions searchOptions);
 	}
 }

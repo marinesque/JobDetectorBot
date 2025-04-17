@@ -3,6 +3,11 @@
 	public class VacancyResponse
 	{
 		/// <summary>
+		/// Уникальное имя вакансии
+		/// </summary>
+		public string UniqName { get; set; }
+
+		/// <summary>
 		/// Наименование вакансии
 		/// </summary>
 		public string Name { get; set; }
@@ -10,17 +15,22 @@
 		/// <summary>
 		/// Уровень дохода
 		/// </summary>
-		public string Salary { get; set; }
+		public SalaryRange Salary { get; set; }
 
 		/// <summary>
 		/// Опыт работы
 		/// </summary>
-		public string WorkExperience { get; set; }
+		public Experience WorkExperience { get; set; }
 
 		/// <summary>
 		/// Занятость
 		/// </summary>
-		public string Job { get; set; }
+		public string Employment { get; set; }
+
+		/// <summary>
+		/// Занятость
+		/// </summary>
+		public string EmploymentForm { get; set; }
 
 		/// <summary>
 		/// График
@@ -30,22 +40,27 @@
 		/// <summary>
 		/// Рабочие часы
 		/// </summary>
-		public string WorkTime { get; set; }
+		public string[] WorkingHours { get; set; }
 
 		/// <summary>
 		/// Формат работы
 		/// </summary>
-		public string WorkType { get; set; }
+		public string[] WorkScheduleByDays { get; set; }
 
 		/// <summary>
-		/// Описание вакансии
+		/// Требования
 		/// </summary>
-		public string Description { get; set; }
+		public string Requirement { get; set; }
+
+		/// <summary>
+		/// Ответственность
+		/// </summary>
+		public string Responsibility { get; set; }
 
 		/// <summary>
 		/// Формат работы
 		/// </summary>
-		public string WorkFormat { get; set; }
+		public string[] WorkFormat { get; set; }
 
 		/// <summary>
 		/// Ссылка на вакансию
@@ -55,11 +70,12 @@
 		/// <summary>
 		/// Дата создания вакансии
 		/// </summary>
-		public string CreatedVacancyDate { get; set; }
+		public DateTime? CreatedVacancyDate { get; set; }
 
 		/// <summary>
 		/// Компания
 		/// </summary>
 		public string Company { get; set; }
+
 	}
 }

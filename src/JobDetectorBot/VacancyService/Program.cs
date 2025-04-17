@@ -26,6 +26,10 @@ namespace VacancyService
 
 			var mongoDBSettings = builder.Configuration.GetSection("MongoDBSettings").Get<MongoDBSettings>();
 
+			var hhClientId = builder.Configuration["HeadHunter:ClientId"];
+
+			var hhClientSecret = builder.Configuration["HeadHunter:ClientSecret"];
+
 			builder.Services.AddDbContext<VacancyDbContext>(options =>
 				options.UseMongoDB(mongoDBSettings.ConnectionString ?? "", mongoDBSettings.DatabaseName ?? ""));
 

@@ -1,5 +1,7 @@
-﻿using System;
+﻿using MongoDB.Bson.Serialization.Attributes;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,72 +10,110 @@ namespace VacancyService.DataAccess.Model
 {
 	public class Vacancy
 	{
+		[BsonId]
 		public Guid Id { get; set; }
+
+		[BsonElement("externalid")]
+		public string ExternalId { get; set; }
+
+		/// <summary>
+		/// Уникальное имя вакансии
+		/// </summary>
+		[BsonElement("uniqname")]
+		public string UniqName { get; set; }
 
 		/// <summary>
 		/// Наименование вакансии
 		/// </summary>
+		[BsonElement("name")]
 		public string Name { get; set; }
 
 		/// <summary>
 		/// Уровень дохода
 		/// </summary>
-		public string Salary { get; set; }
+		[BsonElement("salary")]
+		public SalaryRange? Salary { get; set; }
 
 		/// <summary>
 		/// Опыт работы
 		/// </summary>
-		public string WorkExperience { get; set; }
+		[BsonElement("workexperience")]
+		public Experience WorkExperience { get; set; }
 
 		/// <summary>
 		/// Занятость
 		/// </summary>
-		public string Job { get; set; }
+		[BsonElement("employment")]
+		public string Employment { get; set; }
+
+		/// <summary>
+		/// Занятость
+		/// </summary>
+		[BsonElement("employmentForm")]
+		public string EmploymentForm { get; set; }
 
 		/// <summary>
 		/// График
 		/// </summary>
+		[BsonElement("schedule")]
 		public string Schedule { get; set; }
 
 		/// <summary>
 		/// Рабочие часы
 		/// </summary>
-		public string WorkTime { get; set; }
+		[BsonElement("workhours")]
+		public string[] WorkingHours { get; set; }
 
 		/// <summary>
 		/// Формат работы
 		/// </summary>
-		public string WorkType { get; set; }
+		[BsonElement("workschedule")]
+		public string[] WorkScheduleByDays { get; set; }
 
 		/// <summary>
-		/// Описание вакансии
+		/// Требования
 		/// </summary>
-		public string Description { get; set; }
+		[BsonElement("requirement")]
+		public string Requirement { get; set; }
+
+		/// <summary>
+		/// Ответственность
+		/// </summary>
+		[BsonElement("responsibility")]
+		public string Responsibility { get; set; }
 
 		/// <summary>
 		/// Формат работы
 		/// </summary>
-		public string WorkFormat { get; set; }
+		[BsonElement("workformat")]
+		public string[] WorkFormat { get; set; }
 
 		/// <summary>
 		/// Ссылка на вакансию
 		/// </summary>
+		[BsonElement("link")]
 		public string Link { get; set; }
 
 		/// <summary>
 		/// Дата создания вакансии
 		/// </summary>
-		public string CreatedVacancyDate { get; set; }
+		[BsonElement("created_at")]
+		public DateTime? CreatedVacancyDate { get; set; }
 
 		/// <summary>
 		/// Компания
 		/// </summary>
+		[BsonElement("company")]
 		public string Company { get; set; }
 
+		[BsonElement("create")]
 		public DateTime? Create { get; set; }
 
+		[BsonElement("update")]
 		public DateTime? Update { get; set; }
 
+		[BsonElement("delete")]
 		public DateTime? Delete {  get; set; }
+
 	}
 }

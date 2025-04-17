@@ -11,18 +11,21 @@ namespace VacancyService.DataAccess.Repository
 		public VacancyRepository(VacancyDbContext context)
 		{
 			_context = context;
+			_context.Database.AutoTransactionBehavior = AutoTransactionBehavior.Never;
 		}
 
 		public async Task AddAsync(Vacancy entity)
 		{
 			_context.Vacancies.Add(entity);
-			_context.ChangeTracker.DetectChanges();
 			await _context.SaveChangesAsync();
 		}
 
-		public async Task BulkInsertAsync(List<Vacancy> entity)
-		{
-			_context.Vacancies.AddRange(entity);
+		public async Task BulkInsertAsync(List<Vacancy> entities)
+		{			
+			foreach (var entityItem in entities)
+			{
+				_context.Vacancies.Add(entityItem);
+			}
 			await _context.SaveChangesAsync();
 		}
 
@@ -47,29 +50,26 @@ namespace VacancyService.DataAccess.Repository
 			return await _context.Vacancies.ToListAsync();
 		}
 
-		public async Task<List<Vacancy>> GetAllBySearchString(string search)
+		public async Task<List<Vacancy>> GetAllBySearchString(string search, DbSearchOptions dbSearchOptions)
 		{
-			return await _context.Vacancies.Where(x => EF.Functions.Like(x.Name, "%search%") || EF.Functions.Like(x.Description, "%search%") || EF.Functions.Like(x.Company, "%search%")).ToListAsync();
-		}
+			var result = _context.Vacancies.Where(x => EF.Functions.Like(x.Name.ToLower(), search.ToLower()));
 
-		public async Task<List<Vacancy>> GetAllBySearchString(string search, SearchKeys keys)
-		{
-			switch(keys)
-			{
-				case SearchKeys.Name:
-					return await _context.Vacancies.Where(x => EF.Functions.Like(x.Name, "%search%")).ToListAsync();
-				case SearchKeys.Name | SearchKeys.Company:
-					return await _context.Vacancies.Where(x => EF.Functions.Like(x.Name, "%search%") || EF.Functions.Like(x.Company, "%search%")).ToListAsync();
-				case SearchKeys.Name | SearchKeys.Description:
-					return await _context.Vacancies.Where(x => EF.Functions.Like(x.Name, "%search%") || EF.Functions.Like(x.Description, "%search%")).ToListAsync();
-				case SearchKeys.Company | SearchKeys.Description:
-					return await _context.Vacancies.Where(x => EF.Functions.Like(x.Company, "%search%") || EF.Functions.Like(x.Description, "%search%")).ToListAsync();
-				case SearchKeys.Name | SearchKeys.Company | SearchKeys.Description:
-				default:
-					return await _context.Vacancies
-						.Where(x => EF.Functions.Like(x.Name, "%search%") || EF.Functions.Like(x.Company, "%search%") || EF.Functions.Like(x.Description, "%search%"))
-						.ToListAsync();
-			}
+			if (dbSearchOptions.Salary.HasValue)
+				result = result.Where(x=> dbSearchOptions.Salary <= x.Salary.To && dbSearchOptions.Salary >= x.Salary.From);
+
+			if ( !string.IsNullOrEmpty(dbSearchOptions.Experience))
+				result = result.Where(x => x.WorkExperience.Id == dbSearchOptions.Experience);
+
+			if (!string.IsNullOrEmpty(dbSearchOptions.Schedule))
+				result = result.Where(x => x.Schedule == dbSearchOptions.Schedule);
+
+			if (!string.IsNullOrEmpty(dbSearchOptions.SalaryRangeFrequency))
+				result = result.Where(x => x.Salary.Frequency.Id == dbSearchOptions.SalaryRangeFrequency);
+
+			if (!string.IsNullOrEmpty(dbSearchOptions.Employment))
+				result = result.Where(x => x.Employment == dbSearchOptions.Employment);
+
+			return await result.ToListAsync();
 
 		}
 
@@ -85,14 +85,15 @@ namespace VacancyService.DataAccess.Repository
 			if (entity != null)
 			{
 				entityToUpdate.Name = entity.Name;
-				entityToUpdate.Description = entity.Description;
+				entityToUpdate.Requirement = entity.Requirement;
+				entityToUpdate.Responsibility = entity.Responsibility;
 				entityToUpdate.Schedule = entity.Schedule;
-				entityToUpdate.WorkTime = entity.WorkTime;
+				entityToUpdate.WorkingHours = entity.WorkingHours;
 				entityToUpdate.Salary = entity.Salary;
 				entityToUpdate.WorkExperience = entity.WorkExperience;
-				entityToUpdate.Job = entity.Job;
-				entityToUpdate.Salary = entity.Salary;
-				entityToUpdate.WorkType = entity.WorkType;
+				entityToUpdate.Employment = entity.Employment;
+				entityToUpdate.EmploymentForm = entity.EmploymentForm;
+				entityToUpdate.WorkScheduleByDays = entity.WorkScheduleByDays;
 				entityToUpdate.CreatedVacancyDate = entity.CreatedVacancyDate;
 				entityToUpdate.Company = entity.Company;
 				entityToUpdate.Link = entity.Link;
