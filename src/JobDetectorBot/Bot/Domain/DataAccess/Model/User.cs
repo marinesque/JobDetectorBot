@@ -35,6 +35,6 @@ namespace Bot.Domain.DataAccess.Model
         [Comment("Текущий индекс значения в CriteriaStepValues")]
         public int CurrentCriteriaStepValueIndex { get; set; } = 0;
 
-        public Criteria? Criteria { get; set; }
+        public List<UserCriteriaStepValue>? UserCriteriaStepValues { get; set; } = new();
     }
 }

@@ -3,6 +3,7 @@ using Bot.Domain.DataAccess.Repositories;
 using Bot.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -63,7 +64,7 @@ namespace Bot.Application.Handlers
                     user = new Domain.DataAccess.Model.User
                     {
                         TelegramId = userId,
-                        Criteria = new Criteria()
+                        UserCriteriaStepValues = new List<UserCriteriaStepValue>()
                     };
                     await _userRepository.AddOrUpdateUserAsync(user);
 
@@ -89,7 +90,10 @@ namespace Bot.Application.Handlers
                         await HandleCriteriaInput(client, message, user, cancellationToken);
                         break;
                     case UserState.AwaitingCriteriaEdit:
-                        await HandleCriteriaEdit(client, message, user, cancellationToken);
+                        await HandleCriteriaInput(client, message, user, cancellationToken);
+                        break;
+                    case UserState.AwaitingCustomValue:
+                        await HandleCriteriaInput(client, message, user, cancellationToken);
                         break;
                     default:
                         await HandleDefaultInput(client, message, user, cancellationToken);
@@ -121,6 +125,7 @@ namespace Bot.Application.Handlers
                 replyMarkup: replyKeyboard,
                 cancellationToken: cancellationToken);
         }
+
         private async Task HandleDefaultInput(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
         {
             if (message.Text is not { } messageText)
@@ -166,7 +171,7 @@ namespace Bot.Application.Handlers
 
             await client.SendMessage(
                 chatId: message.Chat.Id,
-                text: "Сценарий отменен.",
+                text: "Ввод критериев завершен.",
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
 
@@ -305,24 +310,26 @@ namespace Bot.Application.Handlers
 
             if (message.Text == "Свое значение")
             {
-                if (_criteriaSteps[user.CurrentCriteriaStep].IsCustom)
+                var currentStep = _criteriaSteps[user.CurrentCriteriaStep];
+                if (currentStep.IsCustom)
                 {
+                    user.State = UserState.AwaitingCustomValue;
+                    await _userRepository.AddOrUpdateUserAsync(user);
+
                     await client.SendMessage(
                         chatId: message.Chat.Id,
-                        text: "Введите свое значение:",
+                        text: "Пожалуйста, введите свое значение:",
                         replyMarkup: new ReplyKeyboardRemove(),
                         cancellationToken: cancellationToken);
                     return;
                 }
-                else
-                {
-                    await client.SendMessage(
-                        chatId: message.Chat.Id,
-                        text: "Ввод своего значения недоступен для этого шага.",
-                        cancellationToken: cancellationToken);
-                    await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
-                    return;
-                }
+
+                await client.SendMessage(
+                    chatId: message.Chat.Id,
+                    text: "Ввод своего значения недоступен для этого шага.",
+                    cancellationToken: cancellationToken);
+                await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+                return;
             }
 
             var step = _criteriaSteps[user.CurrentCriteriaStep];
@@ -335,62 +342,72 @@ namespace Bot.Application.Handlers
             {
                 await client.SendMessage(
                     chatId: message.Chat.Id,
-                    text: "Ошибка: шаг сценария не найден.",
+                    text: "Ошибка: критерий поиска не найден.",
                     cancellationToken: cancellationToken);
                 return;
             }
 
-            var selectedValue = criteriaStep.CriteriaStepValues
-                .FirstOrDefault(csv => csv.Prompt == message.Text);
-
-            if (selectedValue == null && !step.IsCustom)
+            if (user.State == UserState.AwaitingCustomValue)
             {
-                // Если значение не найдено и IsCustom = false, повторяем запрос
-                await client.SendMessage(
-                    chatId: message.Chat.Id,
-                    text: "Пожалуйста, выберите значение из предложенных.",
-                    cancellationToken: cancellationToken);
-                await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
-                return;
+                await _userRepository.AddOrUpdateUserCriteriaAsync(
+                    user.Id,
+                    step.Id,
+                    null, // Нет выбранного значения из списка
+                    message.Text); // Сохраняем текст как кастомное значение
+
+                user.State = UserState.AwaitingCriteria;
+                await _userRepository.AddOrUpdateUserAsync(user);
             }
-
-            if (user.Criteria == null)
+            else
             {
-                user.Criteria = new Criteria
+                var selectedValue = criteriaStep.CriteriaStepValues
+                    .FirstOrDefault(csv => csv.Prompt == message.Text);
+
+                if (selectedValue == null && !step.IsCustom)
                 {
-                    UserId = user.Id
-                };
-                user.Criteria.Region = "";
-                user.Criteria.Post = "";
-                user.Criteria.Salary = 0;
-                user.Criteria.Experience = 0;
-                user.Criteria.WorkType = "";
-                user.Criteria.Schedule = "";
-                user.Criteria.Disability = false;
-                user.Criteria.ForChildren = false;
+                    // Если значение не найдено и IsCustom = false, повторяем запрос
+                    await client.SendMessage(
+                        chatId: message.Chat.Id,
+                        text: "Пожалуйста, выберите значение из предложенных.",
+                        cancellationToken: cancellationToken);
+                    await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+                    return;
+                }
+
+                await _userRepository.AddOrUpdateUserCriteriaAsync(
+                user.Id,
+                step.Id,
+                selectedValue?.Id);
             }
 
-            SetCriteriaValue(user.Criteria, step, selectedValue?.Value ?? message.Text);
-
-            user.CurrentCriteriaStep++;
-            user.CurrentCriteriaStepValueIndex = 0;
-            user.LastUpdated = DateTime.UtcNow;
-            await _userRepository.AddOrUpdateUserAsync(user);
-
-            if (user.CurrentCriteriaStep >= _criteriaSteps.Count)
+            if (user.State == UserState.AwaitingCriteriaEdit)
             {
                 await ResetUserStateAsync(user);
-
-                await client.SendMessage(
-                    chatId: message.Chat.Id,
-                    text: "Ввод критериев завершен. Вы можете отредактировать их позже.",
-                    cancellationToken: cancellationToken);
-
-                await ShowMainMenu(client, message.Chat.Id, cancellationToken);
-                return;
+                //await ShowMainMenu(client, message.Chat.Id, cancellationToken);
+                //return;
             }
+            else
+            {
+                user.CurrentCriteriaStep++;
+                user.CurrentCriteriaStepValueIndex = 0;
+                user.LastUpdated = DateTime.UtcNow;
+                await _userRepository.AddOrUpdateUserAsync(user);
 
-            await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+                if (user.CurrentCriteriaStep >= _criteriaSteps.Count)
+                {
+                    await ResetUserStateAsync(user);
+
+                    await client.SendMessage(
+                        chatId: message.Chat.Id,
+                        text: "Ввод критериев завершен. Вы можете отредактировать их позже.",
+                        cancellationToken: cancellationToken);
+
+                    await ShowMainMenu(client, message.Chat.Id, cancellationToken);
+                    return;
+                }
+
+                await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+            }
         }
 
         private async Task ResetUserStateAsync(Domain.DataAccess.Model.User user)
@@ -401,25 +418,6 @@ namespace Bot.Application.Handlers
             user.CurrentCriteriaStepValueIndex = 0;
 
             await _userRepository.AddOrUpdateUserAsync(user);
-        }
-
-        private void SetCriteriaValue(Criteria criteria, CriteriaStep step, string value)
-        {
-            var property = typeof(Criteria).GetProperty(step.Name);
-            if (property == null)
-            {
-                throw new ArgumentException($"Неизвестный шаг сценария: {step.Name}");
-            }
-
-            try
-            {
-                var parsedValue = ConvertValue(value, step.Type); // ConvertValue для конвертации значения
-                property.SetValue(criteria, parsedValue);
-            }
-            catch (ArgumentException ex)
-            {
-                throw new ArgumentException($"Ошибка при установке значения для шага '{step.Name}': {ex.Message}");
-            }
         }
 
         private async Task HandleSubscription(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
@@ -434,30 +432,102 @@ namespace Bot.Application.Handlers
 
         private async Task ShowUserCriteria(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
         {
-            if (user.Criteria == null)
+            if (_criteriaSteps == null || !_criteriaSteps.Any())
+            {
+                await LoadCriteriaStepsAsync();
+            }
+
+            if (user.UserCriteriaStepValues.Count == 0)
             {
                 await client.SendMessage(
                     chatId: message.Chat.Id,
                     text: "У вас пока нет сохраненных критериев.",
+                    replyMarkup: new ReplyKeyboardMarkup(new[] { new[] { new KeyboardButton("Вернуться в меню") } })
+                    {
+                        ResizeKeyboard = true
+                    },
                     cancellationToken: cancellationToken);
                 return;
             }
 
-            var criteriaText = $"Регион: {user.Criteria.Region}\n" +
-                               $"Должность: {user.Criteria.Post}\n" +
-                               $"Зарплата: {user.Criteria.Salary}\n" +
-                               $"Опыт работы: {user.Criteria.Experience}\n" +
-                               $"Тип занятости: {user.Criteria.WorkType}\n" +
-                               $"График работы: {user.Criteria.Schedule}\n" +
-                               $"Для людей с инвалидностью: {(user.Criteria.Disability ? "Да" : "Нет")}\n" +
-                               $"Для детей с 14 лет: {(user.Criteria.ForChildren ? "Да" : "Нет")}";
+            var criteriaTextBuilder = new StringBuilder();
+
+            foreach (var criteriaStep in _criteriaSteps.OrderBy(cs => cs.OrderBy))
+            {
+                var userValue = user.UserCriteriaStepValues.FirstOrDefault(ucsv => ucsv.CriteriaStepId == criteriaStep.Id);
+
+                if (userValue != null)
+                {
+                    string valueText;
+
+                    if (userValue.CustomValue != null)
+                    {
+                        valueText = userValue.CustomValue;
+                    }
+                    else if (userValue.CriteriaStepValue != null)
+                    {
+                        valueText = userValue.CriteriaStepValue.Prompt;
+                    }
+                    else
+                    {
+                        valueText = "Не указано";
+                    }
+
+                    criteriaTextBuilder.AppendLine($"{criteriaStep.Prompt}: {valueText}");
+                }
+            }
 
             await client.SendMessage(
                 chatId: message.Chat.Id,
-                text: criteriaText,
+                text: criteriaTextBuilder.ToString(),
                 cancellationToken: cancellationToken);
 
-            await ShowMainMenu(client, message.Chat.Id, cancellationToken);
+            var inlineKeyboard = new InlineKeyboardMarkup(
+                _criteriaSteps.Select(step =>
+                    new[] { InlineKeyboardButton.WithCallbackData(step.Prompt, $"edit:{step.Name}") })
+                .ToArray()
+            );
+
+            await client.SendMessage(
+                chatId: message.Chat.Id,
+                text: "Выберите критерий для редактирования:",
+                replyMarkup: inlineKeyboard,
+                cancellationToken: cancellationToken);
+
+            await client.SendMessage(
+                chatId: message.Chat.Id,
+                text: "Или вернитесь в меню:",
+                replyMarkup: new ReplyKeyboardMarkup(new[] { new[] { new KeyboardButton("Вернуться в меню") } })
+                {
+                    ResizeKeyboard = true
+                },
+                cancellationToken: cancellationToken);
+        }
+
+        public async Task HandleCallbackQueryAsync(ITelegramBotClient client, CallbackQuery callbackQuery, CancellationToken cancellationToken)
+        {
+            if (_criteriaSteps == null || !_criteriaSteps.Any())
+            {
+                await LoadCriteriaStepsAsync();
+            }
+
+            if (callbackQuery.Data.StartsWith("edit:"))
+            {
+                var criteriaName = callbackQuery.Data.Split(':')[1];
+                var stepIndex = _criteriaSteps.FindIndex(cs => cs.Name == criteriaName);
+
+                if (stepIndex >= 0)
+                {
+                    var user = await _userRepository.GetUserAsync(callbackQuery.Message.Chat.Id);
+                    user.State = UserState.AwaitingCriteriaEdit;
+                    user.CurrentCriteriaStep = stepIndex;
+                    user.CurrentCriteriaStepValueIndex = 0;
+                    await _userRepository.AddOrUpdateUserAsync(user);
+
+                    await client.AnswerCallbackQuery(callbackQuery.Id);
+                    await SendStepMessage(client, callbackQuery.Message.Chat.Id, user, cancellationToken);
+                }
+            }
         }
 
         private async Task HandleCriteriaEdit(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)

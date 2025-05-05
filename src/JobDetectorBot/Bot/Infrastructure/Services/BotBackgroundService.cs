@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace Bot.Infrastructure
 {
@@ -30,7 +31,7 @@ namespace Bot.Infrastructure
 
             ReceiverOptions receiverOptions = new ReceiverOptions()
             {
-                AllowedUpdates = []
+                AllowedUpdates = [UpdateType.Message, UpdateType.CallbackQuery]
             };
 
             try
@@ -61,7 +62,15 @@ namespace Bot.Infrastructure
                 //var criteriaStepsActualizer = scope.ServiceProvider.GetRequiredService<ICriteriaStepsActualize>();
                 //await criteriaStepsActualizer.StartAsync(token);
                 var messageHandler = scope.ServiceProvider.GetRequiredService<IMessageHandler>();
-                await messageHandler.HandleMessageAsync(client, update, token);
+                switch (update.Type)
+                {
+                    case UpdateType.Message:
+                        await messageHandler.HandleMessageAsync(client, update, token);
+                        break;
+                    case UpdateType.CallbackQuery:
+                        await messageHandler.HandleCallbackQueryAsync(client, update.CallbackQuery, token);
+                        break;
+                }
             }
         }
 

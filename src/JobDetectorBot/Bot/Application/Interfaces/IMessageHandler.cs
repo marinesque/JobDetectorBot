@@ -12,6 +12,7 @@ namespace Bot
         /// <param name="update">Входящее обновление (сообщение).</param>
         /// <param name="cancellationToken">Токен отмены для асинхронной операции.</param>
         /// <returns>Задача, представляющая асинхронную операцию.</returns>
-        Task HandleMessageAsync(ITelegramBotClient cient, Update update, CancellationToken cancellationToken);
+        public Task HandleMessageAsync(ITelegramBotClient cient, Update update, CancellationToken cancellationToken);
+        public Task HandleCallbackQueryAsync(ITelegramBotClient client, CallbackQuery callbackQuery, CancellationToken cancellationToken);
     }
 }
