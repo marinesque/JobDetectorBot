@@ -2,9 +2,9 @@
 {
     public enum UserState
     {
-        None,                // Нет активного сценария
-        AwaitingCriteria,
-        AwaitingCriteriaEdit, // Ожидание редактирования критериев,
-        AwaitingCustomValue
+        None,                       // Нет активного сценария
+        AwaitingCriteria,           // Режим сценария
+        AwaitingCriteriaEdit,       // Ожидание редактирования критериев
+        AwaitingCustomValue         // Ожидание кастомного значения
     }
 }

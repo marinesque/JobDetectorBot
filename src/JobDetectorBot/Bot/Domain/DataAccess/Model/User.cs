@@ -35,6 +35,10 @@ namespace Bot.Domain.DataAccess.Model
         [Comment("Текущий индекс значения в CriteriaStepValues")]
         public int CurrentCriteriaStepValueIndex { get; set; } = 0;
 
+        [Column("IsSingle")]
+        [Comment("Режим точечного редактирования критерия")]
+        public bool IsSingle { get; set; } = false;
+
         public List<UserCriteriaStepValue>? UserCriteriaStepValues { get; set; } = new();
     }
 }

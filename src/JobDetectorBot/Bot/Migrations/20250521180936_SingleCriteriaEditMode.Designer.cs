@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -10,9 +11,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bot.Migrations
 {
     [DbContext(typeof(BotDbContext))]
-    partial class BotDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250521180936_SingleCriteriaEditMode")]
+    partial class SingleCriteriaEditMode
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -132,11 +135,6 @@ namespace Bot.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("CurrentCriteriaStepValueIndex")
                         .HasComment("Текущий индекс значения в CriteriaStepValues");
-
-                    b.Property<bool>("IsSingle")
-                        .HasColumnType("boolean")
-                        .HasColumnName("IsSingle")
-                        .HasComment("Режим точечного редактирования критерия");
 
                     b.Property<DateTime?>("LastUpdated")
                         .HasColumnType("timestamp with time zone")

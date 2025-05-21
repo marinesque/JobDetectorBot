@@ -87,11 +87,7 @@ namespace Bot.Application.Handlers
                 switch (user.State)
                 {
                     case UserState.AwaitingCriteria:
-                        await HandleCriteriaInput(client, message, user, cancellationToken);
-                        break;
                     case UserState.AwaitingCriteriaEdit:
-                        await HandleCriteriaInput(client, message, user, cancellationToken);
-                        break;
                     case UserState.AwaitingCustomValue:
                         await HandleCriteriaInput(client, message, user, cancellationToken);
                         break;
@@ -116,7 +112,7 @@ namespace Bot.Application.Handlers
             })
             {
                 ResizeKeyboard = true,
-                OneTimeKeyboard = true
+                OneTimeKeyboard = false
             };
 
             await client.SendMessage(
@@ -250,7 +246,7 @@ namespace Bot.Application.Handlers
             var replyKeyboard = new ReplyKeyboardMarkup(replyKeyboardButtonList)
             {
                 ResizeKeyboard = true,
-                OneTimeKeyboard = true
+                OneTimeKeyboard = false
             };
 
             await client.SendMessage(
@@ -287,6 +283,8 @@ namespace Bot.Application.Handlers
 
             if (message.Text == "Вернуться в меню")
             {
+                user.IsSingle = false;
+                await _userRepository.AddOrUpdateUserAsync(user);
                 await CancelScenario(client, message, user, cancellationToken);
                 await ShowMainMenu(client, message.Chat.Id, cancellationToken);
                 return;
@@ -380,11 +378,11 @@ namespace Bot.Application.Handlers
                 selectedValue?.Id);
             }
 
-            if (user.State == UserState.AwaitingCriteriaEdit)
+            if (user.State == UserState.AwaitingCriteriaEdit || user.IsSingle == true)
             {
                 await ResetUserStateAsync(user);
-                //await ShowMainMenu(client, message.Chat.Id, cancellationToken);
-                //return;
+                if (user.IsSingle == true)
+                    await ShowUserCriteria(client, message, user, cancellationToken);
             }
             else
             {
@@ -522,6 +520,7 @@ namespace Bot.Application.Handlers
                     user.State = UserState.AwaitingCriteriaEdit;
                     user.CurrentCriteriaStep = stepIndex;
                     user.CurrentCriteriaStepValueIndex = 0;
+                    user.IsSingle = true;
                     await _userRepository.AddOrUpdateUserAsync(user);
 
                     await client.AnswerCallbackQuery(callbackQuery.Id);
