@@ -1,0 +1,263 @@
+{
+  "CriteriaSteps": [
+    {
+      "Name": "Region",
+      "Prompt": "Регион",
+      "IsCustom": true,
+      "OrderBy": 10,
+      "Type": "String",
+      "CriteriaStepValues": [
+        {
+          "Prompt": "Москва",
+          "Value": "Москва",
+          "OrderBy": 10
+        },
+        {
+          "Prompt": "Санкт-Петербург",
+          "Value": "Санкт-Петербург",
+          "OrderBy": 20
+        },
+        {
+          "Prompt": "Калининград",
+          "Value": "Калининград"
+        },
+        {
+          "Prompt": "Уфа",
+          "Value": "Уфа"
+        },
+        {
+          "Prompt": "Екатеринбург",
+          "Value": "Екатеринбург"
+        },
+        {
+          "Prompt": "Челябинск",
+          "Value": "Челябинск"
+        }
+      ]
+    },
+    {
+      "Name": "Post",
+      "Prompt": "Должность",
+      "IsCustom": true,
+      "OrderBy": 20,
+      "Type": "String",
+      "CriteriaStepValues": [
+        {
+          "Prompt": "Менеджер",
+          "Value": "Менеджер"
+        },
+        {
+          "Prompt": "Разработчик",
+          "Value": "Разработчик"
+        },
+        {
+          "Prompt": "Грузчик",
+          "Value": "Грузчик"
+        },
+        {
+          "Prompt": "Директор",
+          "Value": "Директор"
+        }
+      ]
+    },
+    {
+      "Name": "Salary",
+      "Prompt": "Зарплата",
+      "IsCustom": true,
+      "OrderBy": 30,
+      "Type": "Decimal",
+      "CriteriaStepValues": [
+        {
+          "Prompt": "0",
+          "Value": "0",
+          "OrderBy": 10
+        },
+        {
+          "Prompt": "от 30.000р.",
+          "Value": "30000",
+          "OrderBy": 20
+        },
+        {
+          "Prompt": "от 50.000р.",
+          "Value": "50000",
+          "OrderBy": 30
+        },
+        {
+          "Prompt": "от 100.000р.",
+          "Value": "100000",
+          "OrderBy": 40
+        },
+        {
+          "Prompt": "от 200.000р.",
+          "Value": "200000",
+          "OrderBy": 50
+        },
+        {
+          "Prompt": "от 300.000р.",
+          "Value": "300000",
+          "OrderBy": 60
+        },
+        {
+          "Prompt": "от 400.000р.",
+          "Value": "400000",
+          "OrderBy": 70
+        },
+        {
+          "Prompt": "от 500.000р.",
+          "Value": "500000",
+          "OrderBy": 80
+        }
+      ]
+    },
+    {
+      "Name": "Experience",
+      "Prompt": "Опыт работы",
+      "IsCustom": false,
+      "OrderBy": 40,
+      "Type": "Int",
+      "CriteriaStepValues": [
+        {
+          "Prompt": "Без опыта",
+          "Value": "0",
+          "OrderBy": 10
+        },
+        {
+          "Prompt": "До 1 года",
+          "Value": "1",
+          "OrderBy": 20
+        },
+        {
+          "Prompt": "От 1 до 3 лет",
+          "Value": "3",
+          "OrderBy": 30
+        },
+        {
+          "Prompt": "От 3 до 6 лет",
+          "Value": "6",
+          "OrderBy": 40
+        },
+        {
+          "Prompt": "От 6 до 10 лет",
+          "Value": "10",
+          "OrderBy": 50
+        },
+        {
+          "Prompt": "Более 10 лет",
+          "Value": "100",
+          "OrderBy": 60
+        }
+      ]
+    },
+    {
+      "Name": "WorkType",
+      "Prompt": "Занятость",
+      "IsCustom": false,
+      "OrderBy": 50,
+      "Type": "String",
+      "CriteriaStepValues": [
+        {
+          "Prompt": "Полная",
+          "Value": "Полная",
+          "OrderBy": 10
+        },
+        {
+          "Prompt": "Частичная",
+          "Value": "Частичная",
+          "OrderBy": 20
+        },
+        {
+          "Prompt": "Проектная работа",
+          "Value": "Проектная работа",
+          "OrderBy": 40
+        },
+        {
+          "Prompt": "Волонтерство",
+          "Value": "Волонтерство",
+          "OrderBy": 60
+        },
+        {
+          "Prompt": "Стажировка",
+          "Value": "Стажировка",
+          "OrderBy": 50
+        },
+        {
+          "Prompt": "Совместительство",
+          "Value": "Совместительство",
+          "OrderBy": 30
+        }
+      ]
+    },
+    {
+      "Name": "Schedule",
+      "Prompt": "График работы",
+      "IsCustom": false,
+      "OrderBy": 60,
+      "Type": "String",
+      "CriteriaStepValues": [
+        {
+          "Prompt": "Полный день",
+          "Value": "Полный день",
+          "OrderBy": 10
+        },
+        {
+          "Prompt": "Сменный график",
+          "Value": "Сменный график",
+          "OrderBy": 20
+        },
+        {
+          "Prompt": "Гибкий график",
+          "Value": "Гибкий график",
+          "OrderBy": 40
+        },
+        {
+          "Prompt": "Удаленная работа",
+          "Value": "Удаленная работа",
+          "OrderBy": 30
+        },
+        {
+          "Prompt": "Вахтовый метод",
+          "Value": "Вахтовый метод",
+          "OrderBy": 50
+        }
+      ]
+    },
+    {
+      "Name": "Disability",
+      "Prompt": "Доступно для людей с инвалидностью",
+      "IsCustom": false,
+      "OrderBy": 70,
+      "Type": "Boolean",
+      "CriteriaStepValues": [
+        {
+          "Prompt": "Да",
+          "Value": "true",
+          "OrderBy": 10
+        },
+        {
+          "Prompt": "Нет",
+          "Value": "false",
+          "OrderBy": 20
+        }
+      ]
+    },
+    {
+      "Name": "ForChildren",
+      "Prompt": "Доступно для людей от 14 лет",
+      "IsCustom": false,
+      "OrderBy": 80,
+      "Type": "Boolean",
+      "CriteriaStepValues": [
+        {
+          "Prompt": "Да",
+          "Value": "true",
+          "OrderBy": 10
+        },
+        {
+          "Prompt": "Нет",
+          "Value": "false",
+          "OrderBy": 20
+        }
+      ]
+    }
+  ]
+}
