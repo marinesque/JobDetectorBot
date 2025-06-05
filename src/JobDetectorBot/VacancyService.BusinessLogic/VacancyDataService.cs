@@ -6,24 +6,19 @@ using VacancyService.DataAccess.Repository;
 using VacancyService.Dto;
 using VacancyService.HeadHunterApiClient;
 using VacancyService.HeadHunterApiClient.Dto;
-using VacancyService.Parser;
-using VacancyService.Parser.Dto;
 
 namespace VacancyService.BusinessLogic
 {
 	public class VacancyDataService : IVacancyDataService
 	{
 
-		private readonly IRepository<Vacancy> _vacancyRepository;
-		private readonly IParser<SiteVacancy, SiteSearchParam> _parser;
+		private readonly IVacancyRepository _vacancyRepository;
 		private readonly IServiceClient _hhClient;
 
-		public VacancyDataService(IRepository<Vacancy> vacancyRepository,
-			IParser<SiteVacancy, SiteSearchParam> parser,
+		public VacancyDataService(IVacancyRepository vacancyRepository,
 			IServiceClient hhClient)
 		{
 			_vacancyRepository = vacancyRepository;
-			_parser = parser;
 			_hhClient = hhClient;
 		}
 
@@ -145,6 +140,9 @@ namespace VacancyService.BusinessLogic
 
 		private Dto.Experience MapWorkExperience(HeadHunterApiClient.Dto.Experience experience)
 		{
+			if (experience == null)
+				return null;
+
 			return new Dto.Experience
 			{
 				Id = experience.Id,
@@ -154,6 +152,9 @@ namespace VacancyService.BusinessLogic
 
 		private Dto.SalaryRange MapSalary(HeadHunterApiClient.Dto.SalaryRange salaryRange)
 		{
+			if (salaryRange == null)
+				return null;
+
 			return new Dto.SalaryRange
 			{
 				Currency = salaryRange.Currency,
@@ -167,6 +168,9 @@ namespace VacancyService.BusinessLogic
 
 		private Dto.Mode MapMode(HeadHunterApiClient.Dto.Mode mode)
 		{
+			if (mode == null)
+				return null;
+
 			return new Dto.Mode
 			{
 				Name = mode.Name,
@@ -176,6 +180,9 @@ namespace VacancyService.BusinessLogic
 
 		private Dto.Frequency MapFrequency(HeadHunterApiClient.Dto.Frequency frequency)
 		{
+			if (frequency == null)
+				return null;
+
 			return new Dto.Frequency
 			{
 				Id = frequency.Id,
@@ -185,6 +192,9 @@ namespace VacancyService.BusinessLogic
 
 		private DataAccess.Model.Experience Map(HeadHunterApiClient.Dto.Experience experience)
 		{
+			if (experience == null)
+				return null;
+
 			return new DataAccess.Model.Experience
 			{
 				Id = experience.Id,
@@ -194,6 +204,9 @@ namespace VacancyService.BusinessLogic
 
 		private DataAccess.Model.SalaryRange Map(HeadHunterApiClient.Dto.SalaryRange salaryRange)
 		{
+			if (salaryRange == null)
+				return null;
+
 			return new DataAccess.Model.SalaryRange
 			{
 				Currency = salaryRange.Currency,
@@ -207,6 +220,9 @@ namespace VacancyService.BusinessLogic
 
 		private DataAccess.Model.Mode Map(HeadHunterApiClient.Dto.Mode mode)
 		{
+			if (mode == null)
+				return null;
+
 			return new DataAccess.Model.Mode
 			{
 				Name = mode.Name,
@@ -216,6 +232,11 @@ namespace VacancyService.BusinessLogic
 
 		private DataAccess.Model.Frequency Map(HeadHunterApiClient.Dto.Frequency frequency)
 		{
+			if(frequency == null)
+			{
+				return null;
+			}
+
 			return new DataAccess.Model.Frequency
 			{
 				Id = frequency.Id,
@@ -357,6 +378,11 @@ namespace VacancyService.BusinessLogic
 				WorkScheduleByDays = vacancy.WorkScheduleByDays,
 				UniqName = vacancy.UniqName
 			};
+		}
+
+		public Task<List<VacancyResponse>> GetVacancyPositions()
+		{
+			throw new NotImplementedException();
 		}
 	}
 }

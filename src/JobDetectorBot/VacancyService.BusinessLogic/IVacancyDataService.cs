@@ -11,5 +11,7 @@ namespace VacancyService.BusinessLogic
 		Task DeleteAsync(Guid id);
 
 		Task<List<VacancyResponse>> FindVacancy(string search, VacancySearchOptions searchOptions);
+
+		Task<List<VacancyResponse>> GetVacancyPositions();
 	}
 }

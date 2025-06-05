@@ -11,4 +11,8 @@
     <PackageReference Include="MongoDB.EntityFrameworkCore" Version="8.2.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\VacancyService.Configuration\VacancyService.Configuration.csproj" />
+  </ItemGroup>
+
 </Project>

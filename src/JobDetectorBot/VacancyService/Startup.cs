@@ -2,8 +2,6 @@
 using VacancyService.Configuration;
 using VacancyService.DataAccess.Model;
 using VacancyService.DataAccess.Repository;
-using VacancyService.Parser;
-using VacancyService.Parser.Dto;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
@@ -25,13 +23,12 @@ namespace VacancyService
 		public void ConfigureServices(IServiceCollection services)
 		{
 			services.AddHttpClient();
-			services.AddScoped(typeof(IRepository<Vacancy>), typeof(VacancyRepository));
+			services.AddScoped(typeof(IVacancyRepository), typeof(VacancyRepository));
 			services.AddTransient(typeof(IVacancyDataService), typeof(VacancyDataService));
 
 			services.AddTransient(typeof(IGrabberConfiguration), typeof(GrabberConfiguration));
 
-			//services.AddTransient(typeof(IParser<SiteVacancy, SiteSearchParam>), typeof(SeleniumParser));
-			services.AddTransient(typeof(IParser<SiteVacancy, SiteSearchParam>), typeof(HtmlAgilityParser));
+			services.Configure<MongoDBSettings>(Configuration.GetSection("MongoDBSettings"));
 
 			services.AddTransient(typeof(IServiceClient), typeof(ServiceClient));
 		}

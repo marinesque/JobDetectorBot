@@ -68,3 +68,6 @@ src/JobDetectorBot/VacancyService.HeadHunterApiClient/bin
 src/JobDetectorBot/VacancyService.HeadHunterApiClient/obj
 src/JobDetectorBot/VacancyService.HeadHunterApiClient.Dto/bin
 src/JobDetectorBot/VacancyService.HeadHunterApiClient.Dto/obj
+src/JobDetectorBot/Application/bin
+src/JobDetectorBot/Domain/bin
+src/JobDetectorBot/Infrastructure/bin

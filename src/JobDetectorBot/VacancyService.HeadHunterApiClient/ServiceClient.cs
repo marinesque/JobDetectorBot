@@ -5,6 +5,7 @@ using System.Web;
 using System.Text;
 using Microsoft.Extensions.Primitives;
 using System;
+using VacancyService.HeadHunterApiClient.Dto.VacancyPositions;
 
 namespace VacancyService.HeadHunterApiClient
 {
@@ -60,6 +61,42 @@ namespace VacancyService.HeadHunterApiClient
 			return root;
 		}
 
+		public async Task<VacancyPosition> GetVacancyPositions(string searchText)
+		{
+			string baseUri = "https://api.hh.ru/suggests/vacancy_positions?";
+
+			if (string.IsNullOrEmpty(searchText))
+			{
+				return new VacancyPosition();
+			}
+
+			string content = await SearchVacancyPosition(searchText, baseUri);
+
+			VacancyPosition vacancyPosition = JsonConvert.DeserializeObject<VacancyPosition>(content);
+
+			return vacancyPosition;
+		}
+
+		private async Task<string> SearchVacancyPosition(string searchText, string baseUri)
+		{
+			string searchStringParams = string.Concat("text=", Uri.EscapeDataString(searchText));
+
+			var uriBuilder = new UriBuilder(baseUri)
+			{
+				Query = searchStringParams
+			};
+
+			return await GetData(uriBuilder);
+		}
+
+		private async Task<string> GetData(UriBuilder uriBuilder)
+		{
+			_httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("PostmanRuntime/7.43.3");
+			HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, uriBuilder.Uri.AbsoluteUri);
+			HttpResponseMessage response = await _httpClient.SendAsync(request);
+			return await response.Content.ReadAsStringAsync();
+		}
+
 		private async Task<string> SearchData(string searchText, Dictionary<string, string> searchParams, string baseUri, int page = 0)
 		{
 			string baseQuery = $"&per_page=100&search_field=name&page={page}";
@@ -71,10 +108,7 @@ namespace VacancyService.HeadHunterApiClient
 				Query = string.Concat(searchStringParams, '&', string.Join("&", searchParams.Select(kvp => $"{kvp.Key}={kvp.Value}")))
 			};
 
-			_httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("PostmanRuntime/7.43.3");
-			HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, uriBuilder.Uri.AbsoluteUri);
-			HttpResponseMessage response = await _httpClient.SendAsync(request);
-			return await response.Content.ReadAsStringAsync();
+			return await GetData(uriBuilder);
 		}
 	}
 }

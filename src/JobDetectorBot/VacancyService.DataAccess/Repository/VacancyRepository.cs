@@ -1,112 +1,112 @@
 ﻿using VacancyService.DataAccess.Context;
 using VacancyService.DataAccess.Model;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using VacancyService.Configuration;
+using MongoDB.Driver;
 
 namespace VacancyService.DataAccess.Repository
 {
-	public class VacancyRepository: IRepository<Vacancy>
+	public class VacancyRepository: MongoRepositoryBase<Vacancy>, IVacancyRepository
 	{
 		private readonly VacancyDbContext _context;
 
-		public VacancyRepository(VacancyDbContext context)
+		public VacancyRepository(IOptions<MongoDBSettings> options) : base (options.Value.DatabaseName, options.Value.ConnectionString)
 		{
-			_context = context;
-			_context.Database.AutoTransactionBehavior = AutoTransactionBehavior.Never;
 		}
 
-		public async Task AddAsync(Vacancy entity)
+		public async Task AddAsync(Vacancy entity, CancellationToken token = default)
 		{
-			_context.Vacancies.Add(entity);
-			await _context.SaveChangesAsync();
+			await Collection.InsertOneAsync(entity, cancellationToken: token);
 		}
 
-		public async Task BulkInsertAsync(List<Vacancy> entities)
-		{			
-			foreach (var entityItem in entities)
+		public async Task BulkInsertAsync(List<Vacancy> entities, CancellationToken token = default)
+		{
+			await Collection.InsertManyAsync(entities, cancellationToken: token);
+		}
+
+		public async Task DeleteAsync(Guid id, CancellationToken token = default)
+		{
+			await Collection.DeleteOneAsync(Builders<Vacancy>.Filter.Eq(x => x.Id, id), cancellationToken: token);
+		}
+
+		public async Task<List<Vacancy>> GetAllAsync(CancellationToken token)
+		{
+			return await Collection.Find(Builders<Vacancy>.Filter.Empty).ToListAsync(token);
+		}
+
+		public async Task<List<Vacancy>> GetAllBySearchString(string search, DbSearchOptions dbSearchOptions, CancellationToken token = default)
+		{
+			var builder = Builders<Vacancy>.Filter;
+			var filter = builder.Empty;
+
+			if(dbSearchOptions?.Salary.HasValue == true)
 			{
-				_context.Vacancies.Add(entityItem);
+				filter &= builder.And(builder.Gte(x => x.Salary.From, dbSearchOptions.Salary), builder.Lte(x => x.Salary.To, dbSearchOptions.Salary));
 			}
-			await _context.SaveChangesAsync();
-		}
-
-		public async Task DeleteAsync(Guid id)
-		{
-			var entity = await _context.Vacancies.Where(x => x.Id == id).FirstOrDefaultAsync();
-
-			if (entity != null)
+			if(!string.IsNullOrEmpty(dbSearchOptions.Schedule))
 			{
-				_context.Vacancies.Remove(entity);
-				_context.ChangeTracker.DetectChanges();
-				await _context.SaveChangesAsync();
+				filter &= builder.Eq(x => x.Schedule, dbSearchOptions.Schedule);
 			}
-			else
-			{
-				throw new ArgumentException($"Запись с Id {id} отсутствует");
-			}
-		}
+			if(dbSearchOptions.)
 
-		public async Task<List<Vacancy>> GetAllAsync()
-		{
-			return await _context.Vacancies.ToListAsync();
-		}
+			Collection.Find(Builders<Vacancy>.Filter.Eq(x=> x.Salary.From => dbSearchOptions.Salary))
 
-		public async Task<List<Vacancy>> GetAllBySearchString(string search, DbSearchOptions dbSearchOptions)
-		{
-			var result = _context.Vacancies.Where(x => EF.Functions.Like(x.Name.ToLower(), search.ToLower()));
+
+			var result = _context.Vacancies.Where(x => x.Name.ToLower() == search.ToLower());
 
 			if (dbSearchOptions.Salary.HasValue)
 				result = result.Where(x=> dbSearchOptions.Salary <= x.Salary.To && dbSearchOptions.Salary >= x.Salary.From);
 
-			if ( !string.IsNullOrEmpty(dbSearchOptions.Experience))
-				result = result.Where(x => x.WorkExperience.Id == dbSearchOptions.Experience);
+			//if ( !string.IsNullOrEmpty(dbSearchOptions.Experience))
+			//	result = result.Where(x => x.WorkExperience.Id == dbSearchOptions.Experience);
 
 			if (!string.IsNullOrEmpty(dbSearchOptions.Schedule))
 				result = result.Where(x => x.Schedule == dbSearchOptions.Schedule);
 
-			if (!string.IsNullOrEmpty(dbSearchOptions.SalaryRangeFrequency))
-				result = result.Where(x => x.Salary.Frequency.Id == dbSearchOptions.SalaryRangeFrequency);
+			//if (!string.IsNullOrEmpty(dbSearchOptions.SalaryRangeFrequency))
+			//	result = result.Where(x => x.Salary.Frequency.Id == dbSearchOptions.SalaryRangeFrequency);
 
 			if (!string.IsNullOrEmpty(dbSearchOptions.Employment))
 				result = result.Where(x => x.Employment == dbSearchOptions.Employment);
 
-			return await result.ToListAsync();
+			return new List<Vacancy>();
+
+
 
 		}
 
-		public async Task<Vacancy?> GetByIdAsync(Guid id)
+		public async Task<Vacancy?> GetByIdAsync(Guid id, CancellationToken token)
 		{
-			return await _context.Vacancies.FirstOrDefaultAsync(x => x.Id == id);
+			return await Collection.Find(Builders<Vacancy>.Filter.Eq(x => x.Id, id)).FirstOrDefaultAsync(token);
 		}
 
-		public async Task UpdateAsync(Guid id, Vacancy entity)
+		public async Task UpdateAsync(Guid id, Vacancy entity, CancellationToken token = default)
 		{
-			Vacancy? entityToUpdate = await _context.Vacancies.Where(x => x.Id == id).FirstOrDefaultAsync();
+			var updateDefBuilder = new UpdateDefinitionBuilder<Vacancy>();
 
-			if (entity != null)
+			var updateDefinitions = new List<UpdateDefinition<Vacancy>>
 			{
-				entityToUpdate.Name = entity.Name;
-				entityToUpdate.Requirement = entity.Requirement;
-				entityToUpdate.Responsibility = entity.Responsibility;
-				entityToUpdate.Schedule = entity.Schedule;
-				entityToUpdate.WorkingHours = entity.WorkingHours;
-				entityToUpdate.Salary = entity.Salary;
-				entityToUpdate.WorkExperience = entity.WorkExperience;
-				entityToUpdate.Employment = entity.Employment;
-				entityToUpdate.EmploymentForm = entity.EmploymentForm;
-				entityToUpdate.WorkScheduleByDays = entity.WorkScheduleByDays;
-				entityToUpdate.CreatedVacancyDate = entity.CreatedVacancyDate;
-				entityToUpdate.Company = entity.Company;
-				entityToUpdate.Link = entity.Link;
+				updateDefBuilder.Set(x=>x.Requirement, entity.Requirement),
+				updateDefBuilder.Set(x=>x.Schedule, entity.Schedule),
+				updateDefBuilder.Set(x=>x.Salary, entity.Salary),
+				updateDefBuilder.Set(x=>x.Company, entity.Company),
+				updateDefBuilder.Set(x=>x.Employment, entity.Employment),
+				updateDefBuilder.Set(x=>x.EmploymentForm, entity.EmploymentForm),
+				updateDefBuilder.Set(x=>x.Name, entity.Name),
+				updateDefBuilder.Set(x=>x.WorkExperience, entity.WorkExperience),
+				updateDefBuilder.Set(x=>x.WorkFormat, entity.WorkFormat),
+				updateDefBuilder.Set(x=>x.WorkingHours, entity.WorkingHours),
+				updateDefBuilder.Set(x=>x.WorkScheduleByDays, entity.WorkScheduleByDays),
+			};
 
-				_context.Vacancies.Update(entityToUpdate);
+			FilterDefinition<Vacancy> filter = Builders<Vacancy>.Filter.Eq(x => x.Id, id);
 
-				_context.ChangeTracker.DetectChanges();
-				await _context.SaveChangesAsync();
-			}
-			else
-			{
-				throw new ArgumentException($"Запись с Id {id} отсутствует");
-			}
+			UpdateResult ur = await Collection.UpdateOneAsync(filter, updateDefBuilder.Combine(updateDefinitions), cancellationToken: token);
+
+			if (ur == null || ur.IsAcknowledged && ur.MatchedCount < 1)
+				throw new Exception("Не удалось обновить сущность");
+
 		}
 	}
 }
