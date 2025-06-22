@@ -1,0 +1,6 @@
+@VacancyService_HostAddress = http://localhost:5018
+
+GET {{VacancyService_HostAddress}}/vacancy/
+Accept: application/json
+
+###
