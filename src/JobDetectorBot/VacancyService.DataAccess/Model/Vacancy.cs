@@ -1,4 +1,5 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -11,7 +12,8 @@ namespace VacancyService.DataAccess.Model
 	public class Vacancy
 	{
 		[BsonId]
-		public Guid Id { get; set; }
+		[BsonRepresentation(BsonType.ObjectId)]
+		public string Id { get; set; }
 
 		[BsonElement("externalid")]
 		public string ExternalId { get; set; }
@@ -29,6 +31,24 @@ namespace VacancyService.DataAccess.Model
 		public string Name { get; set; }
 
 		/// <summary>
+		/// Регион
+		/// </summary>
+		[BsonElement("area")]
+		public Area? Area { get; set; }
+
+		/// <summary>
+		/// Тип вакансии
+		/// </summary>
+		[BsonElement("type")]
+		public VacancyType? Type { get; set; }
+
+		/// <summary>
+		/// Адрес
+		/// </summary>
+		[BsonElement("address")]
+		public Address? Address { get; set; }
+
+		/// <summary>
 		/// Уровень дохода
 		/// </summary>
 		[BsonElement("salary")]
@@ -44,31 +64,31 @@ namespace VacancyService.DataAccess.Model
 		/// Занятость
 		/// </summary>
 		[BsonElement("employment")]
-		public string Employment { get; set; }
+		public Employment? Employment { get; set; }
 
 		/// <summary>
 		/// Занятость
 		/// </summary>
 		[BsonElement("employmentForm")]
-		public string EmploymentForm { get; set; }
+		public EmploymentForm? EmploymentForm { get; set; }
 
 		/// <summary>
 		/// График
 		/// </summary>
 		[BsonElement("schedule")]
-		public string Schedule { get; set; }
+		public Schedule? Schedule { get; set; }
 
 		/// <summary>
 		/// Рабочие часы
 		/// </summary>
 		[BsonElement("workhours")]
-		public string[] WorkingHours { get; set; }
+		public List<WorkingHour> WorkingHours { get; set; }
 
 		/// <summary>
 		/// Формат работы
 		/// </summary>
 		[BsonElement("workschedule")]
-		public string[] WorkScheduleByDays { get; set; }
+		public List<WorkScheduleByDay> WorkScheduleByDays { get; set; }
 
 		/// <summary>
 		/// Требования
@@ -86,7 +106,7 @@ namespace VacancyService.DataAccess.Model
 		/// Формат работы
 		/// </summary>
 		[BsonElement("workformat")]
-		public string[] WorkFormat { get; set; }
+		public List<WorkFormat> WorkFormat { get; set; }
 
 		/// <summary>
 		/// Ссылка на вакансию
@@ -101,10 +121,22 @@ namespace VacancyService.DataAccess.Model
 		public DateTime? CreatedVacancyDate { get; set; }
 
 		/// <summary>
+		/// Дата публикации вакансии
+		/// </summary>
+		[BsonElement("published_at")]
+		public DateTime? PublishedVacancyDate { get; set; }
+
+		/// <summary>
 		/// Компания
 		/// </summary>
-		[BsonElement("company")]
-		public string Company { get; set; }
+		[BsonElement("employer")]
+		public Employer Employer { get; set; }
+
+		/// <summary>
+		/// Статус архивной вакансии
+		/// </summary>
+		[BsonElement("archived")]
+		public bool? Archived { get; set; }
 
 		[BsonElement("create")]
 		public DateTime? Create { get; set; }
@@ -114,6 +146,5 @@ namespace VacancyService.DataAccess.Model
 
 		[BsonElement("delete")]
 		public DateTime? Delete {  get; set; }
-
 	}
 }

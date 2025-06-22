@@ -99,7 +99,7 @@ namespace VacancyService.HeadHunterApiClient
 
 		private async Task<string> SearchData(string searchText, Dictionary<string, string> searchParams, string baseUri, int page = 0)
 		{
-			string baseQuery = $"&per_page=100&search_field=name&page={page}";
+			string baseQuery = $"&per_page=100&only_with_salary=true&period=2&search_field=name&page={page}";
 
 			string searchStringParams = string.Concat("text=", Uri.EscapeDataString(searchText), baseQuery);
 

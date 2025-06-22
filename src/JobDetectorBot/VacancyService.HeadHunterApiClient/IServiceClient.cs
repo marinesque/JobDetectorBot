@@ -13,5 +13,6 @@ namespace VacancyService.HeadHunterApiClient
 		Task<Root> GetVacancies(string searchText, Dictionary<string, string> searchParams);
 
 		Task<VacancyPosition> GetVacancyPositions(string searchText);
+
 	}
 }

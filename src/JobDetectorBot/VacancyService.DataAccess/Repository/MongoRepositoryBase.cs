@@ -11,14 +11,14 @@ namespace VacancyService.DataAccess.Repository
 	{
 		protected readonly IMongoCollection<T> Collection;
 
-		protected MongoRepositoryBase(string collectionName, string connectionString)
+		protected MongoRepositoryBase(string databaseName, string connectionString)
 		{
 			MongoClientSettings settings = MongoClientSettings.FromConnectionString(connectionString);
 
 			var client = new MongoClient(settings);
 			MongoUrl mongoUrl = MongoUrl.Create(connectionString);
-			IMongoDatabase database = client.GetDatabase(mongoUrl.DatabaseName);
-			Collection = database.GetCollection<T>(collectionName);
+			IMongoDatabase database = client.GetDatabase(databaseName);
+			Collection = database.GetCollection<T>("Vacancy");
 		}
 	}
 }

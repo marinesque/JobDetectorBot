@@ -1,6 +1,5 @@
 
 using VacancyService.Configuration;
-using VacancyService.DataAccess.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Reflection;

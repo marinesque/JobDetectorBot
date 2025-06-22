@@ -6,12 +6,11 @@ namespace VacancyService.BusinessLogic
 	{
 		Task<List<VacancyResponse>> GetAllAsync();
 
-		Task<VacancyResponse> GetByIdAsync(Guid id);
+		Task<VacancyResponse> GetByIdAsync(string id);
 
-		Task DeleteAsync(Guid id);
+		Task DeleteAsync(string id);
 
 		Task<List<VacancyResponse>> FindVacancy(string search, VacancySearchOptions searchOptions);
 
-		Task<List<VacancyResponse>> GetVacancyPositions();
 	}
 }

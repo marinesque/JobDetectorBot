@@ -1,5 +1,4 @@
-﻿using VacancyService.DataAccess.Context;
-using VacancyService.DataAccess.Model;
+﻿using VacancyService.DataAccess.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using VacancyService.Configuration;
@@ -9,8 +8,6 @@ namespace VacancyService.DataAccess.Repository
 {
 	public class VacancyRepository: MongoRepositoryBase<Vacancy>, IVacancyRepository
 	{
-		private readonly VacancyDbContext _context;
-
 		public VacancyRepository(IOptions<MongoDBSettings> options) : base (options.Value.DatabaseName, options.Value.ConnectionString)
 		{
 		}
@@ -25,7 +22,7 @@ namespace VacancyService.DataAccess.Repository
 			await Collection.InsertManyAsync(entities, cancellationToken: token);
 		}
 
-		public async Task DeleteAsync(Guid id, CancellationToken token = default)
+		public async Task DeleteAsync(string id, CancellationToken token = default)
 		{
 			await Collection.DeleteOneAsync(Builders<Vacancy>.Filter.Eq(x => x.Id, id), cancellationToken: token);
 		}
@@ -40,48 +37,84 @@ namespace VacancyService.DataAccess.Repository
 			var builder = Builders<Vacancy>.Filter;
 			var filter = builder.Empty;
 
+			if(string.IsNullOrEmpty(search) || string.IsNullOrWhiteSpace(search))
+			{
+				throw new ArgumentNullException(nameof(search));
+			}
+
+			filter &= builder.Text(search);
+
 			if(dbSearchOptions?.Salary.HasValue == true)
 			{
 				filter &= builder.And(builder.Gte(x => x.Salary.From, dbSearchOptions.Salary), builder.Lte(x => x.Salary.To, dbSearchOptions.Salary));
 			}
-			if(!string.IsNullOrEmpty(dbSearchOptions.Schedule))
+			if (!string.IsNullOrEmpty(dbSearchOptions.SalaryRangeFrequency))
 			{
-				filter &= builder.Eq(x => x.Schedule, dbSearchOptions.Schedule);
+				filter &= builder.Eq(x => x.Salary.Frequency.Id, dbSearchOptions.SalaryRangeFrequency);
 			}
-			if(dbSearchOptions.)
-
-			Collection.Find(Builders<Vacancy>.Filter.Eq(x=> x.Salary.From => dbSearchOptions.Salary))
-
-
-			var result = _context.Vacancies.Where(x => x.Name.ToLower() == search.ToLower());
-
-			if (dbSearchOptions.Salary.HasValue)
-				result = result.Where(x=> dbSearchOptions.Salary <= x.Salary.To && dbSearchOptions.Salary >= x.Salary.From);
-
-			//if ( !string.IsNullOrEmpty(dbSearchOptions.Experience))
-			//	result = result.Where(x => x.WorkExperience.Id == dbSearchOptions.Experience);
-
 			if (!string.IsNullOrEmpty(dbSearchOptions.Schedule))
-				result = result.Where(x => x.Schedule == dbSearchOptions.Schedule);
-
-			//if (!string.IsNullOrEmpty(dbSearchOptions.SalaryRangeFrequency))
-			//	result = result.Where(x => x.Salary.Frequency.Id == dbSearchOptions.SalaryRangeFrequency);
-
+			{
+				filter &= builder.Eq(x => x.Schedule.Name, dbSearchOptions.Schedule);
+			}
 			if (!string.IsNullOrEmpty(dbSearchOptions.Employment))
-				result = result.Where(x => x.Employment == dbSearchOptions.Employment);
+			{
+				filter &= builder.Eq(x => x.Employment.Name, dbSearchOptions.Employment);
+			}
 
-			return new List<Vacancy>();
+			List<Vacancy> result = await Collection.Find(filter).ToListAsync();
 
-
-
+			return result;
 		}
 
-		public async Task<Vacancy?> GetByIdAsync(Guid id, CancellationToken token)
+		public async Task<List<Vacancy>> GetAllBySearchString(List<string> vacancyNames, DbSearchOptions dbSearchOptions, CancellationToken token = default)
+		{
+			var builder = Builders<Vacancy>.Filter;
+			var filter = builder.Empty;
+
+			if (!vacancyNames.Any())
+			{
+				throw new ArgumentNullException(nameof(vacancyNames));
+			}
+
+			string vacanciesString = string.Join(' ', vacancyNames.ToArray());
+
+			filter &= builder.Text(vacanciesString);
+
+			DateTime to_date = DateTime.Now;
+			DateTime from_date = to_date.AddDays(-3);
+
+			filter &= builder.And(builder.Gte(x => x.PublishedVacancyDate, from_date), builder.Lte(x => x.PublishedVacancyDate, to_date));
+
+			filter &= builder.Eq(x => x.Archived, false);
+
+			if (dbSearchOptions?.Salary.HasValue == true)
+			{
+				filter &= builder.And(builder.Gte(x => x.Salary.From, dbSearchOptions.Salary), builder.Lte(x => x.Salary.To, dbSearchOptions.Salary));
+			}
+			if (!string.IsNullOrEmpty(dbSearchOptions.SalaryRangeFrequency))
+			{
+				filter &= builder.Eq(x => x.Salary.Frequency.Id, dbSearchOptions.SalaryRangeFrequency);
+			}
+			if (!string.IsNullOrEmpty(dbSearchOptions.Schedule))
+			{
+				filter &= builder.Eq(x => x.Schedule.Name, dbSearchOptions.Schedule);
+			}
+			if (!string.IsNullOrEmpty(dbSearchOptions.Employment))
+			{
+				filter &= builder.Eq(x => x.Employment.Name, dbSearchOptions.Employment);
+			}
+
+			List<Vacancy> result = await Collection.Find(filter).ToListAsync();
+
+			return result;
+		}
+
+		public async Task<Vacancy?> GetByIdAsync(string id, CancellationToken token)
 		{
 			return await Collection.Find(Builders<Vacancy>.Filter.Eq(x => x.Id, id)).FirstOrDefaultAsync(token);
 		}
 
-		public async Task UpdateAsync(Guid id, Vacancy entity, CancellationToken token = default)
+		public async Task UpdateAsync(string id, Vacancy entity, CancellationToken token = default)
 		{
 			var updateDefBuilder = new UpdateDefinitionBuilder<Vacancy>();
 
@@ -90,7 +123,7 @@ namespace VacancyService.DataAccess.Repository
 				updateDefBuilder.Set(x=>x.Requirement, entity.Requirement),
 				updateDefBuilder.Set(x=>x.Schedule, entity.Schedule),
 				updateDefBuilder.Set(x=>x.Salary, entity.Salary),
-				updateDefBuilder.Set(x=>x.Company, entity.Company),
+				updateDefBuilder.Set(x=>x.Employer, entity.Employer),
 				updateDefBuilder.Set(x=>x.Employment, entity.Employment),
 				updateDefBuilder.Set(x=>x.EmploymentForm, entity.EmploymentForm),
 				updateDefBuilder.Set(x=>x.Name, entity.Name),
