@@ -9,29 +9,101 @@
       "CriteriaStepValues": [
         {
           "Prompt": "Москва",
-          "Value": "Москва",
+          "Value": "1",
           "OrderBy": 10
         },
         {
           "Prompt": "Санкт-Петербург",
-          "Value": "Санкт-Петербург",
+          "Value": "2",
           "OrderBy": 20
         },
         {
-          "Prompt": "Калининград",
-          "Value": "Калининград"
-        },
-        {
-          "Prompt": "Уфа",
-          "Value": "Уфа"
+          "Prompt": "Новосибирск",
+          "Value": "4"
         },
         {
           "Prompt": "Екатеринбург",
-          "Value": "Екатеринбург"
+          "Value": "3"
+        },
+        {
+          "Prompt": "Казань",
+          "Value": "88"
+        },
+        {
+          "Prompt": "Нижний Новгород",
+          "Value": "66"
         },
         {
           "Prompt": "Челябинск",
-          "Value": "Челябинск"
+          "Value": "104"
+        },
+        {
+          "Prompt": "Самара",
+          "Value": "78"
+        },
+        {
+          "Prompt": "Омск",
+          "Value": "68"
+        },
+        {
+          "Prompt": "Ростов-на-Дону",
+          "Value": "76"
+        },
+        {
+          "Prompt": "Уфа",
+          "Value": "99"
+        },
+        {
+          "Prompt": "Красноярск",
+          "Value": "54"
+        },
+        {
+          "Prompt": "Пермь",
+          "Value": "72"
+        },
+        {
+          "Prompt": "Воронеж",
+          "Value": "26"
+        },
+        {
+          "Prompt": "Волгоград",
+          "Value": "24"
+        },
+        {
+          "Prompt": "Краснодар",
+          "Value": "53"
+        },
+        {
+          "Prompt": "Саратов",
+          "Value": "79"
+        },
+        {
+          "Prompt": "Тюмень",
+          "Value": "95"
+        },
+        {
+          "Prompt": "Тольятти",
+          "Value": "212"
+        },
+        {
+          "Prompt": "Ижевск",
+          "Value": "96"
+        },
+        {
+          "Prompt": "Барнаул",
+          "Value": "11"
+        },
+        {
+          "Prompt": "Ульяновск",
+          "Value": "98"
+        },
+        {
+          "Prompt": "Иркутск",
+          "Value": "35"
+        },
+        {
+          "Prompt": "Хабаровск",
+          "Value": "102"
         }
       ]
     },
@@ -117,34 +189,24 @@
       "Type": "Int",
       "CriteriaStepValues": [
         {
-          "Prompt": "Без опыта",
-          "Value": "0",
+          "Prompt": "Нет опыта",
+          "Value": "noExperience",
           "OrderBy": 10
         },
         {
-          "Prompt": "До 1 года",
-          "Value": "1",
+          "Prompt": "От 1 года до 3 лет",
+          "Value": "between1And3",
           "OrderBy": 20
         },
         {
-          "Prompt": "От 1 до 3 лет",
-          "Value": "3",
+          "Prompt": "От 3 до 6 лет",
+          "Value": "between3And6",
           "OrderBy": 30
         },
         {
-          "Prompt": "От 3 до 6 лет",
-          "Value": "6",
+          "Prompt": "Более 6 лет",
+          "Value": "moreThan6",
           "OrderBy": 40
-        },
-        {
-          "Prompt": "От 6 до 10 лет",
-          "Value": "10",
-          "OrderBy": 50
-        },
-        {
-          "Prompt": "Более 10 лет",
-          "Value": "100",
-          "OrderBy": 60
         }
       ]
     },
@@ -156,13 +218,13 @@
       "Type": "String",
       "CriteriaStepValues": [
         {
-          "Prompt": "Полная",
-          "Value": "Полная",
+          "Prompt": "Полная занятость",
+          "Value": "full",
           "OrderBy": 10
         },
         {
-          "Prompt": "Частичная",
-          "Value": "Частичная",
+          "Prompt": "Частичная занятость",
+          "Value": "project",
           "OrderBy": 20
         },
         {
@@ -172,18 +234,13 @@
         },
         {
           "Prompt": "Волонтерство",
-          "Value": "Волонтерство",
-          "OrderBy": 60
-        },
-        {
-          "Prompt": "Стажировка",
-          "Value": "Стажировка",
+          "Value": "volunteer",
           "OrderBy": 50
         },
         {
-          "Prompt": "Совместительство",
-          "Value": "Совместительство",
-          "OrderBy": 30
+          "Prompt": "Стажировка",
+          "Value": "probation",
+          "OrderBy": 60
         }
       ]
     },
@@ -196,27 +253,27 @@
       "CriteriaStepValues": [
         {
           "Prompt": "Полный день",
-          "Value": "Полный день",
+          "Value": "fullDay",
           "OrderBy": 10
         },
         {
           "Prompt": "Сменный график",
-          "Value": "Сменный график",
+          "Value": "shift",
           "OrderBy": 20
         },
         {
           "Prompt": "Гибкий график",
-          "Value": "Гибкий график",
-          "OrderBy": 40
-        },
-        {
-          "Prompt": "Удаленная работа",
-          "Value": "Удаленная работа",
+          "Value": "flexible",
           "OrderBy": 30
         },
         {
+          "Prompt": "Удаленная работа",
+          "Value": "remote",
+          "OrderBy": 40
+        },
+        {
           "Prompt": "Вахтовый метод",
-          "Value": "Вахтовый метод",
+          "Value": "flyInFlyOut",
           "OrderBy": 50
         }
       ]

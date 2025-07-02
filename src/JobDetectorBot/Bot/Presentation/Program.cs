@@ -1,8 +1,8 @@
 ﻿using Bot;
-using Bot.Domain.DataAccess.Model;
 using Bot.Domain.DataAccess.Repositories;
 using Bot.Infrastructure;
 using Bot.Infrastructure.Interfaces;
+using Bot.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,7 +14,16 @@ internal class Program()
 {
     private static void Main(string[] args)
     {
-        var builder = Host.CreateApplicationBuilder(args);
+        var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+        {
+            DisableDefaults = true
+        });
+
+        builder.Configuration
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+            .AddEnvironmentVariables()
+            .AddUserSecrets<Program>()
+            .AddCommandLine(args);
 
         // Проверка токена Telegram
         var telegramConfig = builder.Configuration.GetSection(BotOptions.Telegram);
@@ -26,6 +35,7 @@ internal class Program()
 
         // Настройка базы данных
         var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
+        Console.WriteLine($"connectionString: {connectionString}");
         builder.Services.AddDbContext<BotDbContext>(options =>
             options.UseNpgsql(connectionString));
 
@@ -38,6 +48,11 @@ internal class Program()
         builder.Services.AddScoped<IMessageHandler, MessageHandler>();
         builder.Services.AddScoped<ICriteriaStepsActualize, CriteriaStepsActualize>();
         builder.Services.AddHostedService<BotBackgroundService>();
+        builder.Services.AddHttpClient<IVacancySearchService, VacancySearchService>(client =>
+        {
+            client.BaseAddress = new Uri(builder.Configuration["VacancySearchService:BaseUrl"]);
+        });
+        builder.Services.AddScoped<IVacancySearchService, VacancySearchService>();
 
         var host = builder.Build();
 
