@@ -24,6 +24,8 @@ namespace Bot.Domain.DataAccess.Repositories
                 existingStep.IsCustom = criteriaStep.IsCustom;
                 existingStep.OrderBy = criteriaStep.OrderBy;
                 existingStep.Type = criteriaStep.Type;
+                existingStep.IsMapped = criteriaStep.IsMapped;
+                existingStep.MainDictionary = criteriaStep.MainDictionary;
 
                 foreach (var value in criteriaStep.CriteriaStepValues)
                 {

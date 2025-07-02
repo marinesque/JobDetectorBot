@@ -29,6 +29,22 @@ namespace Bot.Infrastructure.Services
             _apiBaseUrl = configuration["VacancySearchService:BaseUrl"] ?? throw new ArgumentNullException("VacancySearchService:BaseUrl не настроен");
         }
 
+        /// <summary>
+        /// Отправка запроса в сервис работы с вакансиями
+        /// Формат запроса: {
+        ///   "UserId": Users.Id,
+        ///   "RequestDate": DateTime.UtcNow
+        ///   "UserCriteria": [{
+        ///     "Name": CriteriaStep.Name,
+        ///     "Id": если кастомное значение userCriteria.CustomValue, если нет userCriteria.CriteriaStepValue?.Value,
+        ///     "IsCustom": !string.IsNullOrEmpty(UserCriteriaStepValue.CustomValue),
+        ///     "IsMapped": CriteriaStep.IsMapped,
+        ///     "MainDictionary": CriteriaStep.MainDictionary - заполняется, если критерий входит в справочник
+        ///   }]
+        /// }
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
         public async Task SendUserCriteriaToSearchService(long userId)
         {
             try
@@ -44,18 +60,20 @@ namespace Bot.Infrastructure.Services
                 {
                     UserId = userId,
                     RequestDate = DateTime.UtcNow,
-                    UserCriteria = new List<CriteriaItem>()
+                    UserCriteria = new List<UserCriteriaItem>()
                 };
 
                 foreach (var userCriteria in user.UserCriteriaStepValues)
                 {
                     var isCustom = !string.IsNullOrEmpty(userCriteria.CustomValue);
 
-                    criteriaData.UserCriteria.Add(new CriteriaItem
+                    criteriaData.UserCriteria.Add(new UserCriteriaItem
                     {
-                        CriteriaName = userCriteria.CriteriaStep.Name,
-                        Value = isCustom ? userCriteria.CustomValue : userCriteria.CriteriaStepValue?.Value,
-                        IsCustom = isCustom
+                        Name = userCriteria.CriteriaStep.Name,
+                        Id = isCustom ? userCriteria.CustomValue : userCriteria.CriteriaStepValue?.Value,
+                        IsCustom = isCustom,
+                        IsMapped = userCriteria.CriteriaStep.IsMapped,
+                        MainDictionary = userCriteria.CriteriaStep.MainDictionary
                     });
                 }
 

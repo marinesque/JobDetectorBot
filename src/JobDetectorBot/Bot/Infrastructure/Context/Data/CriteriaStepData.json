@@ -1,11 +1,12 @@
 {
   "CriteriaSteps": [
     {
-      "Name": "Region",
+      "Name": "area",
       "Prompt": "Регион",
       "IsCustom": true,
       "OrderBy": 10,
       "Type": "String",
+      "IsMapped": true,
       "CriteriaStepValues": [
         {
           "Prompt": "Москва",
@@ -113,6 +114,7 @@
       "IsCustom": true,
       "OrderBy": 20,
       "Type": "String",
+      "IsMapped": false,
       "CriteriaStepValues": [
         {
           "Prompt": "Менеджер",
@@ -133,11 +135,12 @@
       ]
     },
     {
-      "Name": "Salary",
+      "Name": "salary",
       "Prompt": "Зарплата",
       "IsCustom": true,
       "OrderBy": 30,
       "Type": "Decimal",
+      "IsMapped": false,
       "CriteriaStepValues": [
         {
           "Prompt": "0",
@@ -187,6 +190,7 @@
       "IsCustom": false,
       "OrderBy": 40,
       "Type": "Int",
+      "IsMapped": true,
       "CriteriaStepValues": [
         {
           "Prompt": "Нет опыта",
@@ -211,11 +215,12 @@
       ]
     },
     {
-      "Name": "WorkType",
+      "Name": "employment",
       "Prompt": "Занятость",
       "IsCustom": false,
       "OrderBy": 50,
       "Type": "String",
+      "IsMapped": true,
       "CriteriaStepValues": [
         {
           "Prompt": "Полная занятость",
@@ -224,12 +229,12 @@
         },
         {
           "Prompt": "Частичная занятость",
-          "Value": "project",
+          "Value": "part",
           "OrderBy": 20
         },
         {
           "Prompt": "Проектная работа",
-          "Value": "Проектная работа",
+          "Value": "project",
           "OrderBy": 40
         },
         {
@@ -245,11 +250,12 @@
       ]
     },
     {
-      "Name": "Schedule",
+      "Name": "schedule",
       "Prompt": "График работы",
       "IsCustom": false,
       "OrderBy": 60,
       "Type": "String",
+      "IsMapped": true,
       "CriteriaStepValues": [
         {
           "Prompt": "Полный день",
@@ -279,11 +285,13 @@
       ]
     },
     {
-      "Name": "Disability",
+      "Name": "accept_handicapped",
       "Prompt": "Доступно для людей с инвалидностью",
       "IsCustom": false,
       "OrderBy": 70,
       "Type": "Boolean",
+      "IsMapped": true,
+      "MainDictionary": "vacancy_label",
       "CriteriaStepValues": [
         {
           "Prompt": "Да",
@@ -298,11 +306,13 @@
       ]
     },
     {
-      "Name": "ForChildren",
+      "Name": "accept_kids",
       "Prompt": "Доступно для людей от 14 лет",
       "IsCustom": false,
       "OrderBy": 80,
       "Type": "Boolean",
+      "IsMapped": true,
+      "MainDictionary": "vacancy_label",
       "CriteriaStepValues": [
         {
           "Prompt": "Да",

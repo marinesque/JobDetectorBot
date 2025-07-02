@@ -20,6 +20,9 @@
   </ItemGroup>
 
     <ItemGroup>
+        <None Update="docker-compose.yml">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
         <None Update="Infrastructure\Context\Data\CriteriaStepData.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>

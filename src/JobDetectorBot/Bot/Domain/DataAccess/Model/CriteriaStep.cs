@@ -35,6 +35,14 @@ namespace Bot.Domain.DataAccess.Model
         [Comment("Тип значения")]
         public string Type { get; set; }
 
+        [Column("IsMapped")]
+        [Comment("Маппинг с сервисом вакансий")]
+        public bool IsMapped { get; set; } = false;
+
+        [Column("MainDictionary", TypeName = "jsonb")]
+        [Comment("Основной словарь значений")]
+        public string? MainDictionary { get; set; }
+
         public List<CriteriaStepValue>? CriteriaStepValues { get; set; } = new();
     }
 }

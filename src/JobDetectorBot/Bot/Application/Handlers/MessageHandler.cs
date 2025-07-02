@@ -578,10 +578,10 @@ namespace Bot.Application.Handlers
                     UserId = user.TelegramId,
                     RequestDate = DateTime.UtcNow,
                     UserCriteria = user.UserCriteriaStepValues
-                        .Select(uc => new CriteriaItem
+                        .Select(uc => new UserCriteriaItem
                         {
-                            CriteriaName = uc.CriteriaStep.Name,
-                            Value = uc.CustomValue ?? uc.CriteriaStepValue?.Value,
+                            Name = uc.CriteriaStep.Name,
+                            Id = uc.CustomValue ?? uc.CriteriaStepValue?.Value,
                             IsCustom = !string.IsNullOrWhiteSpace(uc.CustomValue)
                         })
                         .ToList()

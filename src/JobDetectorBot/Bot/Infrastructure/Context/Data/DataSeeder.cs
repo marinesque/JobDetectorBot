@@ -33,6 +33,8 @@ public class DataSeeder
                 existingStep.IsCustom = step.IsCustom;
                 existingStep.OrderBy = step.OrderBy;
                 existingStep.Type = step.Type;
+                existingStep.IsMapped = step.IsMapped;
+                existingStep.MainDictionary = step.MainDictionary;
 
                 foreach (var value in step.CriteriaStepValues)
                 {

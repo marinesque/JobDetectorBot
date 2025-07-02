@@ -4,6 +4,6 @@
     {
         public long UserId { get; set; }
         public DateTime RequestDate { get; set; }
-        public List<CriteriaItem> UserCriteria { get; set; } = new();
+        public List<UserCriteriaItem> UserCriteria { get; set; } = new();
     }
 }
