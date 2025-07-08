@@ -2,12 +2,12 @@
 using Bot.Domain.DataAccess.Repositories;
 using Bot.Infrastructure;
 using Bot.Infrastructure.Interfaces;
-using Bot.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Npgsql;
 using MessageHandler = Bot.Application.Handlers.MessageHandler;
 
 internal class Program()
@@ -40,6 +40,7 @@ internal class Program()
             options.UseNpgsql(connectionString));
 
         // Настройка сервисов
+        Console.WriteLine("Настройка сервисов..");
         builder.Services.Configure<BotOptions>(telegramConfig);
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<BotOptions>>().Value);
         builder.Services.AddScoped<UserRepository>();
@@ -48,25 +49,56 @@ internal class Program()
         builder.Services.AddScoped<IMessageHandler, MessageHandler>();
         builder.Services.AddScoped<ICriteriaStepsActualize, CriteriaStepsActualize>();
         builder.Services.AddHostedService<BotBackgroundService>();
-        builder.Services.AddHttpClient<IVacancySearchService, VacancySearchService>(client =>
+        /*builder.Services.AddHttpClient<IVacancySearchService, VacancySearchService>(client =>
         {
             client.BaseAddress = new Uri(builder.Configuration["VacancySearchService:BaseUrl"]);
         });
         builder.Services.AddScoped<IVacancySearchService, VacancySearchService>();
+        */
 
+        Console.WriteLine("Билдим решение..");
         var host = builder.Build();
+        Console.WriteLine("Билд завершен.");
+
+        try
+        {
+            // Проверка парсинга строки подключения
+            new NpgsqlConnectionStringBuilder(connectionString);
+        }
+        catch (Exception ex)
+        {
+            throw new FormatException($"Invalid connection string format: {connectionString}", ex);
+        }
 
         // Миграция?
         using (var scope = host.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
-            var retries = 10;
+            var retries = 5;
             while (retries > 0)
             {
                 try
                 {
+                    Console.WriteLine("Попытка подключения к PostgreSQL...");
+
+                    using (var connection = dbContext.Database.GetDbConnection())
+                    {
+                        connection.Open();
+
+                        using (var command = connection.CreateCommand())
+                        {
+                            command.CommandText = "SELECT version();";
+                            var version = (string)command.ExecuteScalar();
+                            Console.WriteLine($"Версия PostgreSQL: {version}");
+                        }
+
+                        connection.Close();
+                    }
+
+                    Console.WriteLine("Применение миграций...");
                     dbContext.Database.Migrate();
+                    Console.WriteLine("Миграции успешно применены");
                     break;
                 }
                 catch (Exception)
