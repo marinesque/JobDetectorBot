@@ -109,7 +109,7 @@
       ]
     },
     {
-      "Name": "Post",
+      "Name": "post",
       "Prompt": "Должность",
       "IsCustom": true,
       "OrderBy": 20,
@@ -139,7 +139,7 @@
       "Prompt": "Зарплата",
       "IsCustom": true,
       "OrderBy": 30,
-      "Type": "Decimal",
+      "Type": "Int",
       "IsMapped": false,
       "CriteriaStepValues": [
         {
@@ -148,48 +148,48 @@
           "OrderBy": 10
         },
         {
-          "Prompt": "от 30.000р.",
+          "Prompt": "30.000р.",
           "Value": "30000",
           "OrderBy": 20
         },
         {
-          "Prompt": "от 50.000р.",
+          "Prompt": "50.000р.",
           "Value": "50000",
           "OrderBy": 30
         },
         {
-          "Prompt": "от 100.000р.",
+          "Prompt": "100.000р.",
           "Value": "100000",
           "OrderBy": 40
         },
         {
-          "Prompt": "от 200.000р.",
+          "Prompt": "200.000р.",
           "Value": "200000",
           "OrderBy": 50
         },
         {
-          "Prompt": "от 300.000р.",
+          "Prompt": "300.000р.",
           "Value": "300000",
           "OrderBy": 60
         },
         {
-          "Prompt": "от 400.000р.",
+          "Prompt": "400.000р.",
           "Value": "400000",
           "OrderBy": 70
         },
         {
-          "Prompt": "от 500.000р.",
+          "Prompt": "500.000р.",
           "Value": "500000",
           "OrderBy": 80
         }
       ]
     },
     {
-      "Name": "Experience",
+      "Name": "experience",
       "Prompt": "Опыт работы",
       "IsCustom": false,
       "OrderBy": 40,
-      "Type": "Int",
+      "Type": "String",
       "IsMapped": true,
       "CriteriaStepValues": [
         {

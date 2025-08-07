@@ -27,6 +27,8 @@ namespace Bot.Domain.DataAccess.Repositories
                 existingStep.IsMapped = criteriaStep.IsMapped;
                 existingStep.MainDictionary = criteriaStep.MainDictionary;
 
+                _context.CriteriaSteps.Update(existingStep);
+
                 foreach (var value in criteriaStep.CriteriaStepValues)
                 {
                     var existingValue = existingStep.CriteriaStepValues
@@ -44,6 +46,24 @@ namespace Bot.Domain.DataAccess.Repositories
             }
             else
             {
+                var stepToAdd = new CriteriaStep
+                {
+                    Name = criteriaStep.Name,
+                    Prompt = criteriaStep.Prompt,
+                    IsCustom = criteriaStep.IsCustom,
+                    OrderBy = criteriaStep.OrderBy,
+                    Type = criteriaStep.Type,
+                    IsMapped = criteriaStep.IsMapped,
+                    MainDictionary = criteriaStep.MainDictionary,
+
+                    CriteriaStepValues = criteriaStep.CriteriaStepValues.Select(v => new CriteriaStepValue
+                    {
+                        Prompt = v.Prompt,
+                        Value = v.Value,
+                        OrderBy = v.OrderBy
+                    }).ToList()
+                };
+
                 await _context.CriteriaSteps.AddAsync(criteriaStep);
             }
 

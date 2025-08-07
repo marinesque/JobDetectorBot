@@ -2,12 +2,15 @@
 using Bot.Domain.DataAccess.Repositories;
 using Bot.Infrastructure;
 using Bot.Infrastructure.Interfaces;
+using Bot.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using StackExchange.Redis;
 using MessageHandler = Bot.Application.Handlers.MessageHandler;
 
 internal class Program()
@@ -39,6 +42,20 @@ internal class Program()
         builder.Services.AddDbContext<BotDbContext>(options =>
             options.UseNpgsql(connectionString));
 
+        // Redis
+        var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+        builder.Services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = redisConnectionString;
+            options.InstanceName = "Bot_";
+        });
+        builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+            ConnectionMultiplexer.Connect(redisConnectionString));
+        builder.Services.AddSingleton<IUserCacheService, UserCacheService>();
+        builder.Services.AddHostedService<RedisSyncBackgroundService>();
+        builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
+            ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")));
+
         // Настройка сервисов
         Console.WriteLine("Настройка сервисов..");
         builder.Services.Configure<BotOptions>(telegramConfig);
@@ -55,6 +72,9 @@ internal class Program()
         });
         builder.Services.AddScoped<IVacancySearchService, VacancySearchService>();
         */
+
+        builder.Logging.AddConsole();
+        builder.Logging.AddDebug();
 
         Console.WriteLine("Билдим решение..");
         var host = builder.Build();
@@ -75,30 +95,12 @@ internal class Program()
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<BotDbContext>();
 
-            var retries = 5;
+            var retries = 10;
             while (retries > 0)
             {
                 try
                 {
-                    Console.WriteLine("Попытка подключения к PostgreSQL...");
-
-                    using (var connection = dbContext.Database.GetDbConnection())
-                    {
-                        connection.Open();
-
-                        using (var command = connection.CreateCommand())
-                        {
-                            command.CommandText = "SELECT version();";
-                            var version = (string)command.ExecuteScalar();
-                            Console.WriteLine($"Версия PostgreSQL: {version}");
-                        }
-
-                        connection.Close();
-                    }
-
-                    Console.WriteLine("Применение миграций...");
                     dbContext.Database.Migrate();
-                    Console.WriteLine("Миграции успешно применены");
                     break;
                 }
                 catch (Exception)
@@ -115,6 +117,21 @@ internal class Program()
 
             var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
             seeder.SeedDataAsync().GetAwaiter().GetResult();
+        }
+
+        try
+        {
+            var redis = ConnectionMultiplexer.Connect("localhost:6379,abortConnect=false");
+            var db = redis.GetDatabase();
+
+            db.StringSet("test_key", "test_value");
+            var value = db.StringGet("test_key");
+
+            Console.WriteLine($"Redis запущен. Value: {value}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Redis не удалось запустить: {ex.Message}");
         }
 
         host.Run();

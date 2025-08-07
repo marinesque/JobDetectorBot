@@ -26,7 +26,8 @@ public class DataSeeder
 
         foreach (var step in seedData.CriteriaSteps)
         {
-            var existingStep = await _criteriaStepRepository.GetCriteriaStepByNameAsync(step.Name);
+            await _criteriaStepRepository.AddOrUpdateCriteriaStepAsync(step);
+            /*var existingStep = await _criteriaStepRepository.GetCriteriaStepByNameAsync(step.Name);
             if (existingStep != null)
             {
                 existingStep.Prompt = step.Prompt;
@@ -63,7 +64,7 @@ public class DataSeeder
                 await _criteriaStepRepository.AddOrUpdateCriteriaStepAsync(step);
             }
 
-            await _criteriaStepRepository.SaveChangesAsync();
+            await _criteriaStepRepository.SaveChangesAsync();*/
         }
     }
 

@@ -39,7 +39,7 @@ namespace Bot.Domain.DataAccess.Model
         [Comment("Маппинг с сервисом вакансий")]
         public bool IsMapped { get; set; } = false;
 
-        [Column("MainDictionary", TypeName = "jsonb")]
+        [Column("MainDictionary")]
         [Comment("Основной словарь значений")]
         public string? MainDictionary { get; set; }
 

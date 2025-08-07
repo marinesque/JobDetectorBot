@@ -22,6 +22,7 @@ namespace Bot.Application.Handlers
         private readonly CriteriaStepRepository _criteriaStepRepository;
         private readonly BotDbContext _context;
         private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly IUserCacheService _userCacheService;
 
         private List<CriteriaStep> _criteriaSteps;
 
@@ -38,13 +39,15 @@ namespace Bot.Application.Handlers
             UserRepository userRepository,
             CriteriaStepRepository criteriaStepRepository,
             BotDbContext context,
-            IServiceScopeFactory serviceScopeFactory)
+            IServiceScopeFactory serviceScopeFactory,
+            IUserCacheService userCacheService)
         {
             _logger = logger;
             _userRepository = userRepository;
             _context = context;
             _criteriaStepRepository = criteriaStepRepository;
             _serviceScopeFactory = serviceScopeFactory;
+            _userCacheService = userCacheService;
         }
 
         //private List<CriteriaStep> GetCriteriaSteps() => _criteriaStepsActualizer.GetCriteriaSteps();
@@ -64,16 +67,25 @@ namespace Bot.Application.Handlers
 
                 _logger.LogInformation($"Получено сообщение от {username} (User ID: {userId}, Chat ID: {chatId}): {message.Text}");
 
-                var user = await _userRepository.GetUserAsync(userId);
+                var user = await _userCacheService.GetUserAsync(userId);
+
+                if (user == null)
+                {
+                    user = await _userRepository.GetUserAsync(userId);
+                }
 
                 if (user == null)
                 {
                     user = new Domain.DataAccess.Model.User
                     {
                         TelegramId = userId,
-                        UserCriteriaStepValues = new List<UserCriteriaStepValue>()
+                        UserCriteriaStepValues = new List<UserCriteriaStepValue>(),
+                        LastUpdated = DateTime.UtcNow
                     };
-                    await _userRepository.AddOrUpdateUserAsync(user);
+
+                    await _userCacheService.SetUserAsync(user);
+                    await _userCacheService.SyncToDatabaseAsync(user);
+                    //await _userRepository.AddOrUpdateUserAsync(user);
 
                     await client.SendMessage(
                         chatId: chatId,
@@ -82,11 +94,13 @@ namespace Bot.Application.Handlers
                         cancellationToken: cancellationToken);
 
                     await ShowMainMenu(client, chatId, cancellationToken);
+
                     return;
                 }
 
                 if (user.State != UserState.None && DateTime.UtcNow - user.LastUpdated > TimeSpan.FromMinutes(10))
                 {
+                    await _userCacheService.SyncToDatabaseAsync(user);
                     await CancelScenario(client, message, user, cancellationToken);
                     return;
                 }
@@ -167,7 +181,9 @@ namespace Bot.Application.Handlers
             user.CurrentCriteriaStep = 0; // Шаг
             user.CurrentCriteriaStepValueIndex = 0; // Страница ответа
             user.LastUpdated = DateTime.UtcNow;
-            await _userRepository.AddOrUpdateUserAsync(user);
+            await _userCacheService.SetUserAsync(user);
+            await _userCacheService.SyncToDatabaseAsync(user);
+            //await _userRepository.AddOrUpdateUserAsync(user);
 
             await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
         }
@@ -295,7 +311,9 @@ namespace Bot.Application.Handlers
             if (message.Text == "Вернуться в меню")
             {
                 user.IsSingle = false;
-                await _userRepository.AddOrUpdateUserAsync(user);
+                user.LastUpdated = DateTime.UtcNow;
+                await _userCacheService.SetUserAsync(user);
+                //await _userRepository.AddOrUpdateUserAsync(user);
                 await CancelScenario(client, message, user, cancellationToken);
                 await ShowMainMenu(client, message.Chat.Id, cancellationToken);
                 return;
@@ -304,7 +322,9 @@ namespace Bot.Application.Handlers
             if (message.Text == "Назад")
             {
                 user.CurrentCriteriaStepValueIndex = Math.Max(0, user.CurrentCriteriaStepValueIndex - 4);
-                await _userRepository.AddOrUpdateUserAsync(user);
+                user.LastUpdated = DateTime.UtcNow;
+                await _userCacheService.SetUserAsync(user);
+                //await _userRepository.AddOrUpdateUserAsync(user);
                 await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
                 return;
             }
@@ -312,7 +332,9 @@ namespace Bot.Application.Handlers
             if (message.Text == "Далее")
             {
                 user.CurrentCriteriaStepValueIndex += 4;
-                await _userRepository.AddOrUpdateUserAsync(user);
+                user.LastUpdated = DateTime.UtcNow;
+                await _userCacheService.SetUserAsync(user);
+                //await _userRepository.AddOrUpdateUserAsync(user);
                 await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
                 return;
             }
@@ -323,7 +345,9 @@ namespace Bot.Application.Handlers
                 if (currentStep.IsCustom)
                 {
                     user.State = UserState.AwaitingCustomValue;
-                    await _userRepository.AddOrUpdateUserAsync(user);
+                    user.LastUpdated = DateTime.UtcNow;
+                    await _userCacheService.SetUserAsync(user);
+                    //await _userRepository.AddOrUpdateUserAsync(user);
 
                     await client.SendMessage(
                         chatId: message.Chat.Id,
@@ -359,14 +383,21 @@ namespace Bot.Application.Handlers
             // Состояние ожидания кастомного значения критерия
             if (user.State == UserState.AwaitingCustomValue)
             {
-                await _userRepository.AddOrUpdateUserCriteriaAsync(
-                    user.Id,
+                //await _userRepository.AddOrUpdateUserCriteriaAsync(
+                //    user.Id,
+                //    step.Id,
+                //    null, // Нет выбранного значения из списка
+                //    message.Text); // Сохраняем текст как кастомное значение
+                user = await _userCacheService.UpdateUserCriteriaAsync(
+                    user.TelegramId,
                     step.Id,
                     null, // Нет выбранного значения из списка
                     message.Text); // Сохраняем текст как кастомное значение
 
                 user.State = UserState.AwaitingCriteria;
-                await _userRepository.AddOrUpdateUserAsync(user);
+                user.LastUpdated = DateTime.UtcNow;
+                await _userCacheService.SetUserAsync(user);
+                //await _userRepository.AddOrUpdateUserAsync(user);
             }
             else
             {
@@ -384,10 +415,14 @@ namespace Bot.Application.Handlers
                     return;
                 }
 
-                await _userRepository.AddOrUpdateUserCriteriaAsync(
-                user.Id,
-                step.Id,
-                selectedValue?.Id);
+                //await _userRepository.AddOrUpdateUserCriteriaAsync(
+                //user.Id,
+                //step.Id,
+                //selectedValue?.Id);
+                user = await _userCacheService.UpdateUserCriteriaAsync(
+                    user.TelegramId,
+                    step.Id,
+                    selectedValue?.Id);
             }
 
             // Состояние точечной модификации критерия
@@ -402,7 +437,8 @@ namespace Bot.Application.Handlers
                 user.CurrentCriteriaStep++;
                 user.CurrentCriteriaStepValueIndex = 0;
                 user.LastUpdated = DateTime.UtcNow;
-                await _userRepository.AddOrUpdateUserAsync(user);
+                await _userCacheService.SetUserAsync(user);
+                //await _userRepository.AddOrUpdateUserAsync(user);
 
                 if (user.CurrentCriteriaStep >= _criteriaSteps.Count)
                 {
@@ -427,8 +463,10 @@ namespace Bot.Application.Handlers
             user.State = UserState.None;
             user.CurrentCriteriaStep = 0;
             user.CurrentCriteriaStepValueIndex = 0;
-
-            await _userRepository.AddOrUpdateUserAsync(user);
+            user.LastUpdated = DateTime.UtcNow;
+            await _userCacheService.SetUserAsync(user);
+            await _userCacheService.SyncToDatabaseAsync(user);
+            //await _userRepository.AddOrUpdateUserAsync(user);
         }
 
         private async Task HandleSubscription(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
@@ -529,12 +567,16 @@ namespace Bot.Application.Handlers
 
                 if (stepIndex >= 0)
                 {
-                    var user = await _userRepository.GetUserAsync(callbackQuery.Message.Chat.Id);
+                    var user = await _userCacheService.GetUserAsync(callbackQuery.From.Id);
+                    if (user == null) user = await _userRepository.GetUserAsync(callbackQuery.Message.Chat.Id);
+
                     user.State = UserState.AwaitingCriteriaEdit;
                     user.CurrentCriteriaStep = stepIndex;
                     user.CurrentCriteriaStepValueIndex = 0;
                     user.IsSingle = true;
-                    await _userRepository.AddOrUpdateUserAsync(user);
+                    user.LastUpdated = DateTime.UtcNow;
+                    await _userCacheService.SetUserAsync(user);
+                    //await _userRepository.AddOrUpdateUserAsync(user);
 
                     await client.AnswerCallbackQuery(callbackQuery.Id);
                     await SendStepMessage(client, callbackQuery.Message.Chat.Id, user, cancellationToken);
@@ -553,9 +595,9 @@ namespace Bot.Application.Handlers
                         text: "⚠️ У вас нет сохраненных критериев поиска.\n\n" +
                              "Пожалуйста, сначала установите критерии через меню \"Мои критерии поиска\".",
                         replyMarkup: new ReplyKeyboardMarkup(new[]
-                        {
-                    new[] { new KeyboardButton("Мои критерии поиска") },
-                    new[] { new KeyboardButton("Вернуться в меню") }
+                                {
+                            new[] { new KeyboardButton("Мои критерии поиска") },
+                            new[] { new KeyboardButton("Вернуться в меню") }
                         })
                         {
                             ResizeKeyboard = true
@@ -587,10 +629,8 @@ namespace Bot.Application.Handlers
                         .ToList()
                 };
 
-                // Отправляем запрос и получаем вакансии
                 var vacancies = await vacancySearchService.SearchVacancies(request);
 
-                // Обработка результатов
                 if (vacancies == null || !vacancies.Any())
                 {
                     await client.SendMessage(
@@ -609,7 +649,6 @@ namespace Bot.Application.Handlers
                     return;
                 }
 
-                // Формируем сообщение с результатами
                 var responseMessage = new StringBuilder();
                 responseMessage.AppendLine("✅ <b>Найдены вакансии:</b>");
                 responseMessage.AppendLine();

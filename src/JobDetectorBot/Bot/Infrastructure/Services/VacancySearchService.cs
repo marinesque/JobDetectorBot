@@ -16,7 +16,6 @@ namespace Bot.Infrastructure.Services
         private readonly ILogger<VacancySearchService> _logger;
         private readonly string _apiBaseUrl;
 
-        //TODO: Настроить апи
         public VacancySearchService(
             HttpClient httpClient,
             UserRepository userRepository,
@@ -29,22 +28,6 @@ namespace Bot.Infrastructure.Services
             _apiBaseUrl = configuration["VacancySearchService:BaseUrl"] ?? throw new ArgumentNullException("VacancySearchService:BaseUrl не настроен");
         }
 
-        /// <summary>
-        /// Отправка запроса в сервис работы с вакансиями
-        /// Формат запроса: {
-        ///   "UserId": Users.Id,
-        ///   "RequestDate": DateTime.UtcNow
-        ///   "UserCriteria": [{
-        ///     "Name": CriteriaStep.Name,
-        ///     "Id": если кастомное значение userCriteria.CustomValue, если нет userCriteria.CriteriaStepValue?.Value,
-        ///     "IsCustom": !string.IsNullOrEmpty(UserCriteriaStepValue.CustomValue),
-        ///     "IsMapped": CriteriaStep.IsMapped,
-        ///     "MainDictionary": CriteriaStep.MainDictionary - заполняется, если критерий входит в справочник
-        ///   }]
-        /// }
-        /// </summary>
-        /// <param name="userId"></param>
-        /// <returns></returns>
         public async Task SendUserCriteriaToSearchService(long userId)
         {
             try
@@ -109,8 +92,34 @@ namespace Bot.Infrastructure.Services
         {
             try
             {
-                // TODO: Дописать точный адрес
-                var response = await _httpClient.GetAsync($"{_apiBaseUrl}/api/vacancies?userId={request.UserId}");
+                // Получаем пользователя с его критериями
+                var user = await _userRepository.GetUserAsync(request.UserId);
+                if (user == null || user.UserCriteriaStepValues == null || !user.UserCriteriaStepValues.Any())
+                {
+                    _logger.LogWarning($"Пользователь {request.UserId} не найден или не имеет критериев");
+                    return new List<Vacancy>();
+                }
+
+                // Извлекаем нужные параметры из критериев пользователя
+                string search = GetCriteriaValue(user, "Post");
+                string experience = GetCriteriaValue(user, "Experience");
+                string employment = GetCriteriaValue(user, "Employment");
+                string schedule = GetCriteriaValue(user, "Schedule");
+                int? salary = GetSalaryValue(user);
+
+                // Формируем URL запроса с параметрами
+                var queryParams = new List<string>();
+                if (!string.IsNullOrEmpty(search)) queryParams.Add($"search={Uri.EscapeDataString(search)}");
+                if (!string.IsNullOrEmpty(experience)) queryParams.Add($"experience={Uri.EscapeDataString(experience)}");
+                if (!string.IsNullOrEmpty(employment)) queryParams.Add($"employment={Uri.EscapeDataString(employment)}");
+                if (!string.IsNullOrEmpty(schedule)) queryParams.Add($"schedule={Uri.EscapeDataString(schedule)}");
+                if (salary.HasValue) queryParams.Add($"salary={salary.Value}");
+
+                var queryString = queryParams.Any() ? $"?{string.Join("&", queryParams)}" : "";
+                var url = $"{_apiBaseUrl}/vacancy{queryString}";
+
+                // Отправляем GET запрос
+                var response = await _httpClient.GetAsync(url);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -125,6 +134,49 @@ namespace Bot.Infrastructure.Services
             {
                 _logger.LogError(ex, $"Ошибка при поиске вакансий для пользователя {request.UserId}");
                 throw;
+            }
+        }
+
+        private string GetCriteriaValue(User user, string criteriaName)
+        {
+            var criteria = user.UserCriteriaStepValues
+                .FirstOrDefault(uc => uc.CriteriaStep?.Name == criteriaName);
+
+            if (criteria == null) return null;
+
+            // Предпочтение отдается кастомному значению
+            return !string.IsNullOrEmpty(criteria.CustomValue)
+                ? criteria.CustomValue
+                : criteria.CriteriaStepValue?.Value;
+        }
+
+        private int? GetSalaryValue(User user)
+        {
+            var salaryCriteria = user.UserCriteriaStepValues
+                .FirstOrDefault(uc => uc.CriteriaStep?.Name == "Salary");
+
+            if (salaryCriteria == null) return null;
+
+            try
+            {
+                // Пытаемся получить значение из CustomValue или Value
+                var salaryValue = !string.IsNullOrEmpty(salaryCriteria.CustomValue)
+                    ? salaryCriteria.CustomValue
+                    : salaryCriteria.CriteriaStepValue?.Value;
+
+                if (string.IsNullOrEmpty(salaryValue)) return null;
+
+                // Пытаемся преобразовать в число
+                if (decimal.TryParse(salaryValue, out var decimalValue))
+                {
+                    return (int)Math.Round(decimalValue);
+                }
+
+                return null;
+            }
+            catch
+            {
+                return null;
             }
         }
     }

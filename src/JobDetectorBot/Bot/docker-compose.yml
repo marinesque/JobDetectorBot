@@ -22,22 +22,42 @@ services:
       retries: 30
     networks:
       - bot_network
+       
+  redis:
+    image: redis:alpine
+    container_name: bot_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bot_network
+    restart: unless-stopped
 
   bot:
     build: .
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "5000:80"
     environment:
-      - ConnectionStrings=Host=db;Database=botdbcont;Username=postgres;Password=postgres;Port=5432
+      - ConnectionStrings__PostgreSQL=Host=db;Database=botdbcont;Username=postgres;Password=postgres
+      - ConnectionStrings__Redis=bot_redis:6379
     networks:
       - bot_network
-    restart: on-failure
+    restart: unless-stopped  # Изменено с on-failure
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   bot_network:
