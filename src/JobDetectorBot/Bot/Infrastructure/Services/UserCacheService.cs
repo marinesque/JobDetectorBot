@@ -1,9 +1,11 @@
-﻿using Bot.Domain.DataAccess.Model;
+﻿using Bot.Domain.DataAccess.Dto;
+using Bot.Domain.DataAccess.Model;
 using Bot.Domain.DataAccess.Repositories;
 using Bot.Infrastructure.Interfaces;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Bot.Infrastructure.Services
 {
@@ -13,6 +15,7 @@ namespace Bot.Infrastructure.Services
         private readonly UserRepository _userRepository;
         private readonly ILogger<UserCacheService> _logger;
         private readonly TimeSpan _defaultExpiry = TimeSpan.FromMinutes(30);
+        private readonly JsonSerializerOptions _jsonOptions;
 
         public UserCacheService(
             IDistributedCache cache,
@@ -22,6 +25,15 @@ namespace Bot.Infrastructure.Services
             _cache = cache;
             _userRepository = userRepository;
             _logger = logger;
+
+            _jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                ReferenceHandler = ReferenceHandler.IgnoreCycles,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = false,
+                Converters = { new JsonStringEnumConverter() }
+            };
         }
 
         public async Task<User> GetUserAsync(long telegramId)
@@ -38,15 +50,15 @@ namespace Bot.Infrastructure.Services
                 if (cachedUser != null)
                 {
                     _logger.LogDebug("Пользователь {TelegramId} найден в кэше", telegramId);
-                    var userFromCache = JsonSerializer.Deserialize<User>(cachedUser);
+                    var userDto = JsonSerializer.Deserialize<UserCacheDto>(cachedUser, _jsonOptions);
 
-                    if (userFromCache != null)
+                    if (userDto != null)
                     {
                         _logger.LogInformation("Успешно получен пользователь {TelegramId} из кэша. Критериев: {CriteriaCount}",
-                            telegramId, userFromCache.UserCriteriaStepValues?.Count ?? 0);
+                            telegramId, userDto.UserCriteriaStepValues?.Count ?? 0);
                     }
 
-                    return userFromCache;
+                    return userDto.ToUser();
                 }
 
                 _logger.LogDebug("Пользователь {TelegramId} отсутствует в кэше. Загрузка из БД...", telegramId);
@@ -91,7 +103,10 @@ namespace Bot.Infrastructure.Services
                     AbsoluteExpirationRelativeToNow = actualExpiry
                 };
 
-                var serializedUser = JsonSerializer.Serialize(user);
+                // DTO без циклических ссылок
+                var userDto = UserCacheDto.FromUser(user);
+                var serializedUser = JsonSerializer.Serialize(userDto, _jsonOptions);
+
                 await _cache.SetStringAsync(key, serializedUser, options);
 
                 _logger.LogInformation("Пользователь {TelegramId} успешно сохранен в кэш. Размер данных: {DataSize} байт",

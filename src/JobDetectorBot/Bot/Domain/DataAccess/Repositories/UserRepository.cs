@@ -71,7 +71,11 @@ namespace Bot.Domain.DataAccess.Repositories
                 {
                     _logger.LogInformation($"Обновление существующего пользователя: Id={existingUser.Id}");
 
-                    _context.Entry(existingUser).CurrentValues.SetValues(user);
+                    //_context.Entry(existingUser).CurrentValues.SetValues(user);
+                    existingUser.State = user.State;
+                    existingUser.CurrentCriteriaStep = user.CurrentCriteriaStep;
+                    existingUser.CurrentCriteriaStepValueIndex = user.CurrentCriteriaStepValueIndex;
+                    existingUser.IsSingle = user.IsSingle;
                     existingUser.LastUpdated = DateTime.UtcNow;
 
                     foreach (var userCriteria in user.UserCriteriaStepValues)
@@ -85,14 +89,25 @@ namespace Bot.Domain.DataAccess.Repositories
                         {
                             _logger.LogDebug($"Обновление критерия: CriteriaStepId={userCriteria.CriteriaStepId}");
 
-                            _context.Entry(existingCriteria).CurrentValues.SetValues(userCriteria);
+                            //_context.Entry(existingCriteria).CurrentValues.SetValues(userCriteria);
+                            existingCriteria.CriteriaStepValueId = userCriteria.CriteriaStepValueId;
+                            existingCriteria.CustomValue = userCriteria.CustomValue;
+                            existingCriteria.UpdatedAt = DateTime.UtcNow;
                         }
                         else
                         {
                             _logger.LogDebug($"Добавление нового критерия: CriteriaStepId={userCriteria.CriteriaStepId}");
 
-                            userCriteria.UserId = existingUser.Id;
-                            existingUser.UserCriteriaStepValues.Add(userCriteria);
+                            //userCriteria.UserId = existingUser.Id;
+                            //existingUser.UserCriteriaStepValues.Add(userCriteria);
+                            existingUser.UserCriteriaStepValues.Add(new UserCriteriaStepValue
+                            {
+                                CriteriaStepId = userCriteria.CriteriaStepId,
+                                CriteriaStepValueId = userCriteria.CriteriaStepValueId,
+                                CustomValue = userCriteria.CustomValue,
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow
+                            });
                         }
                     }
 
