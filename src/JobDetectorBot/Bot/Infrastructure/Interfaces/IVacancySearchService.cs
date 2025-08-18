@@ -1,11 +1,12 @@
-﻿using Bot.Domain.DataAccess.Model;
+﻿using Bot.Domain.DataAccess.Dto;
 using Bot.Domain.Request.VacancySearch;
 
 namespace Bot.Infrastructure.Interfaces
 {
     public interface IVacancySearchService
     {
-        public Task SendUserCriteriaToSearchService(long userId);
-        public Task<List<Vacancy>> SearchVacancies(UserCriteriaRequest request);
+        Task<bool> SearchAndCacheVacancies(long userId, UserCriteriaRequest request);
+        Task<List<VacancyDto>> GetVacanciesPage(long userId, int page, int pageSize = 5);
+        Task ClearCache(long userId);
     }
 }

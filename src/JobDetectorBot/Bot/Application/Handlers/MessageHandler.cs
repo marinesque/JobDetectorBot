@@ -11,6 +11,7 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using User = Bot.Domain.DataAccess.Model.User;
 
 namespace Bot.Application.Handlers
 {
@@ -23,6 +24,7 @@ namespace Bot.Application.Handlers
         private readonly BotDbContext _context;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IUserCacheService _userCacheService;
+        private readonly IVacancySearchService _vacancyService;
 
         private List<CriteriaStep> _criteriaSteps;
 
@@ -40,7 +42,8 @@ namespace Bot.Application.Handlers
             CriteriaStepRepository criteriaStepRepository,
             BotDbContext context,
             IServiceScopeFactory serviceScopeFactory,
-            IUserCacheService userCacheService)
+            IUserCacheService userCacheService,
+            IVacancySearchService vacancySearchService)
         {
             _logger = logger;
             _userRepository = userRepository;
@@ -48,6 +51,7 @@ namespace Bot.Application.Handlers
             _criteriaStepRepository = criteriaStepRepository;
             _serviceScopeFactory = serviceScopeFactory;
             _userCacheService = userCacheService;
+            _vacancyService = vacancySearchService;
         }
 
         //private List<CriteriaStep> GetCriteriaSteps() => _criteriaStepsActualizer.GetCriteriaSteps();
@@ -130,7 +134,7 @@ namespace Bot.Application.Handlers
                 new[] { new KeyboardButton("Начать новый поиск") },
                 new[] { new KeyboardButton("Искать вакансии") },
                 new[] { new KeyboardButton("Мои критерии поиска") },
-                new[] { new KeyboardButton("Подписка") }
+                new[] { new KeyboardButton("Вернуться в меню") }
             })
             {
                 ResizeKeyboard = true,
@@ -321,21 +325,29 @@ namespace Bot.Application.Handlers
 
             if (message.Text == "Назад")
             {
-                user.CurrentCriteriaStepValueIndex = Math.Max(0, user.CurrentCriteriaStepValueIndex - 4);
+                if (user.State == UserState.SearchingVacancies)
+                    user.CurrentCriteriaStepValueIndex -= 1;
+                else user.CurrentCriteriaStepValueIndex = Math.Max(0, user.CurrentCriteriaStepValueIndex - 4);
                 user.LastUpdated = DateTime.UtcNow;
                 await _userCacheService.SetUserAsync(user);
                 //await _userRepository.AddOrUpdateUserAsync(user);
-                await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+                if (user.State == UserState.SearchingVacancies)
+                    await SearchVacancies(client, message, user, cancellationToken);
+                else await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
                 return;
             }
 
             if (message.Text == "Далее")
             {
-                user.CurrentCriteriaStepValueIndex += 4;
+                if (user.State == UserState.SearchingVacancies)
+                    user.CurrentCriteriaStepValueIndex += 1;
+                else user.CurrentCriteriaStepValueIndex += 4;
                 user.LastUpdated = DateTime.UtcNow;
                 await _userCacheService.SetUserAsync(user);
                 //await _userRepository.AddOrUpdateUserAsync(user);
-                await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+                if (user.State == UserState.SearchingVacancies)
+                    await SearchVacancies(client, message, user, cancellationToken);
+                else await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
                 return;
             }
 
@@ -429,8 +441,7 @@ namespace Bot.Application.Handlers
             if (user.State == UserState.AwaitingCriteriaEdit || user.IsSingle == true)
             {
                 await ResetUserStateAsync(user);
-                if (user.IsSingle == true)
-                    await ShowUserCriteria(client, message, user, cancellationToken);
+                await ShowUserCriteria(client, message, user, cancellationToken);
             }
             else
             {
@@ -464,6 +475,7 @@ namespace Bot.Application.Handlers
             user.CurrentCriteriaStep = 0;
             user.CurrentCriteriaStepValueIndex = 0;
             user.LastUpdated = DateTime.UtcNow;
+            user.IsSingle = false;
             await _userCacheService.SetUserAsync(user);
             await _userCacheService.SyncToDatabaseAsync(user);
             //await _userRepository.AddOrUpdateUserAsync(user);
@@ -562,6 +574,8 @@ namespace Bot.Application.Handlers
 
             if (callbackQuery.Data.StartsWith("edit:"))
             {
+                await client.AnswerCallbackQuery(callbackQuery.Id, cancellationToken: cancellationToken);
+
                 var criteriaName = callbackQuery.Data.Split(':')[1];
                 var stepIndex = _criteriaSteps.FindIndex(cs => cs.Name == criteriaName);
 
@@ -578,7 +592,6 @@ namespace Bot.Application.Handlers
                     await _userCacheService.SetUserAsync(user);
                     //await _userRepository.AddOrUpdateUserAsync(user);
 
-                    await client.AnswerCallbackQuery(callbackQuery.Id);
                     await SendStepMessage(client, callbackQuery.Message.Chat.Id, user, cancellationToken);
                 }
             }
@@ -606,100 +619,136 @@ namespace Bot.Application.Handlers
                     return;
                 }
 
-                // "печатает..."
-                await client.SendChatAction(
-                    chatId: message.Chat.Id,
-                    action: ChatAction.Typing,
-                    cancellationToken: cancellationToken);
 
-                using var scope = _serviceScopeFactory.CreateScope();
-                var vacancySearchService = scope.ServiceProvider.GetRequiredService<IVacancySearchService>();
-
-                var request = new UserCriteriaRequest
+                try
                 {
-                    UserId = user.TelegramId,
-                    RequestDate = DateTime.UtcNow,
-                    UserCriteria = user.UserCriteriaStepValues
-                        .Select(uc => new UserCriteriaItem
+                    // "печатает..."
+                    await client.SendChatAction(
+                        chatId: message.Chat.Id,
+                        action: ChatAction.Typing,
+                        cancellationToken: cancellationToken);
+
+                    // Проверяем есть ли сохраненные вакансии
+                    if (user.CurrentCriteriaStepValueIndex != 0)
+                    {
+                        // Первый запрос - ищем и кэшируем
+                        var request = CreateRequestFromUser(user);
+                        var hasResults = await _vacancyService.SearchAndCacheVacancies(user.TelegramId, request);
+
+                        if (!hasResults)
                         {
-                            Name = uc.CriteriaStep.Name,
-                            Id = uc.CustomValue ?? uc.CriteriaStepValue?.Value,
-                            IsCustom = !string.IsNullOrWhiteSpace(uc.CustomValue)
-                        })
-                        .ToList()
-                };
+                            await client.SendMessage(
+                            chatId: message.Chat.Id,
+                            text: "😕 По вашим критериям не найдено подходящих вакансий.\n\n" +
+                                  "Попробуйте изменить параметры поиска.",
+                            replyMarkup: new ReplyKeyboardMarkup(new[]
+                            {
+                                new[] { new KeyboardButton("Мои критерии поиска") },
+                                new[] { new KeyboardButton("Вернуться в меню") }
+                            })
+                            {
+                                ResizeKeyboard = true
+                            },
+                            cancellationToken: cancellationToken);
+                            return;
+                        }
+                    }
 
-                var vacancies = await vacancySearchService.SearchVacancies(request);
+                    if (user.State != UserState.SearchingVacancies) user.CurrentCriteriaStepValueIndex = 1;
+                    user.State = UserState.SearchingVacancies;
+                    user.IsSingle = false;
+                    user.LastUpdated = DateTime.UtcNow;
 
-                if (vacancies == null || !vacancies.Any())
-                {
+                    var page = user.CurrentCriteriaStepValueIndex;
+                    var vacancies = await _vacancyService.GetVacanciesPage(user.TelegramId, page);
+
+                    // Формируем сообщение
+                    var messageText = string.Join("\n\n", vacancies.Select((v, i) =>
+                        $"#{i + 1 + (page - 1) * 5}\n" +
+                        $"<b>💼Должность:</b> {v.Title}\n" +
+                        $"<b>🏢 Компания:</b> {v.CompanyName}\n" +
+                        $"<b>💵 Зарплата:</b> {v.Salary}\n" +
+                        $"<b>🌍 Местоположение:</b> {v.Location}\n" +
+                        $"<b>🧑‍💼Опыт:</b> {v.Experience}\n" +
+                        $"<b>🕒Занятость:</b> {v.EmploymentType}\n" +
+                        $"<b>📅График:</b> {v.Schedule}\n" +
+                        $"🔗 <a href=\"{v.Url}\">Ссылка на вакансию</a>"));
+
+                    var keyboard = new List<KeyboardButton[]>();
+
+                    var nextPage = await _vacancyService.GetVacanciesPage(user.TelegramId, page + 1);
+                    bool hasNext = nextPage.Any();
+
+                    if (page > 1 && hasNext)
+                    {
+                        keyboard.Add(new[] { new KeyboardButton("Назад"), new KeyboardButton("Далее") });
+                    }
+                    else if (page > 1)
+                    {
+                        keyboard.Add(new[] { new KeyboardButton("Назад") });
+                    }
+                    else if (hasNext)
+                    {
+                        keyboard.Add(new[] { new KeyboardButton("Далее") });
+                    }
+
+                    keyboard.Add(new[] { new KeyboardButton("Вернуться в меню") });
+
                     await client.SendMessage(
                         chatId: message.Chat.Id,
-                        text: "😕 По вашим критериям не найдено подходящих вакансий.\n\n" +
-                              "Попробуйте изменить параметры поиска.",
+                        text: messageText,
+                        parseMode: ParseMode.Html,
+                        replyMarkup: new ReplyKeyboardMarkup(keyboard) { ResizeKeyboard = true },
+                        cancellationToken: cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Ошибка при поиске вакансий для пользователя {user.TelegramId}");
+
+                    await client.SendMessage(
+                        chatId: message.Chat.Id,
+                        text: "⚠️ Произошла ошибка при поиске вакансий. Пожалуйста, попробуйте позже.",
                         replyMarkup: new ReplyKeyboardMarkup(new[]
                         {
-                            new[] { new KeyboardButton("Мои критерии поиска") },
                             new[] { new KeyboardButton("Вернуться в меню") }
                         })
                         {
                             ResizeKeyboard = true
                         },
                         cancellationToken: cancellationToken);
-                    return;
                 }
-
-                var responseMessage = new StringBuilder();
-                responseMessage.AppendLine("✅ <b>Найдены вакансии:</b>");
-                responseMessage.AppendLine();
-
-                foreach (var vacancy in vacancies.Take(5)) // Ограничиваем 5 вакансиями
-                {
-                    //responseMessage.AppendLine($"<b>{vacancy.Title}</b>");
-                    //responseMessage.AppendLine($"🏢 {vacancy.CompanyName}");
-                    //responseMessage.AppendLine($"💰 {vacancy.Salary ?? "Зарплата не указана"}");
-                    //responseMessage.AppendLine($"🌍 {vacancy.Location}");
-                    //responseMessage.AppendLine($"🔗 <a href=\"{vacancy.Url}\">Подробнее</a>");
-                    //responseMessage.AppendLine();
-                }
-
-                if (vacancies.Count > 5)
-                {
-                    responseMessage.AppendLine($"<i>Показано 5 из {vacancies.Count} вакансий</i>");
-                }
-
-                await client.SendMessage(
-                    chatId: message.Chat.Id,
-                    text: responseMessage.ToString(),
-                    parseMode: ParseMode.Html,
-                    linkPreviewOptions: false,
-                    replyMarkup: new ReplyKeyboardMarkup(new[]
-                    {
-                        new[] { new KeyboardButton("Искать еще") },
-                        new[] { new KeyboardButton("Мои критерии поиска") },
-                        new[] { new KeyboardButton("Вернуться в меню") }
-                    })
-                    {
-                        ResizeKeyboard = true
-                    },
-                    cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Ошибка при поиске вакансий для пользователя {user.TelegramId}");
-
-                await client.SendMessage(
-                    chatId: message.Chat.Id,
-                    text: "⚠️ Произошла ошибка при поиске вакансий. Пожалуйста, попробуйте позже.",
-                    replyMarkup: new ReplyKeyboardMarkup(new[]
-                    {
-                        new[] { new KeyboardButton("Вернуться в меню") }
-                    })
-                    {
-                        ResizeKeyboard = true
-                    },
-                    cancellationToken: cancellationToken);
+                _logger.LogError(ex, "Ошибка при поиске вакансий!");
             }
+        }
+
+        private UserCriteriaRequest CreateRequestFromUser(User user)
+        {
+            if (user?.UserCriteriaStepValues == null)
+            {
+                return new UserCriteriaRequest
+                {
+                    UserId = user?.TelegramId ?? 0,
+                    RequestDate = DateTime.UtcNow,
+                    UserCriteria = new List<UserCriteriaItem>()
+                };
+            }
+
+            return new UserCriteriaRequest
+            {
+                UserId = user.TelegramId,
+                RequestDate = DateTime.UtcNow,
+                UserCriteria = user.UserCriteriaStepValues.Select(ucsv => new UserCriteriaItem
+                {
+                    Name = ucsv.CriteriaStep?.Name ?? string.Empty,
+                    Id = ucsv.CriteriaStepValue?.Value ?? ucsv.CustomValue ?? string.Empty,
+                    IsCustom = !string.IsNullOrEmpty(ucsv.CustomValue),
+                    IsMapped = ucsv.CriteriaStep?.IsMapped ?? false,
+                    MainDictionary = ucsv.CriteriaStep?.MainDictionary
+                }).ToList()
+            };
         }
     }
 }

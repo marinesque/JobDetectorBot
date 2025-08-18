@@ -4,6 +4,7 @@ using Bot.Domain.DataAccess.Repositories;
 using Bot.Infrastructure.Interfaces;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -16,15 +17,21 @@ namespace Bot.Infrastructure.Services
         private readonly ILogger<UserCacheService> _logger;
         private readonly TimeSpan _defaultExpiry = TimeSpan.FromMinutes(30);
         private readonly JsonSerializerOptions _jsonOptions;
+        private readonly BotDbContext _context;
+        private readonly IConnectionMultiplexer _redis;
 
         public UserCacheService(
             IDistributedCache cache,
             UserRepository userRepository,
-            ILogger<UserCacheService> logger)
+            ILogger<UserCacheService> logger,
+            BotDbContext context,
+            IConnectionMultiplexer redis)
         {
             _cache = cache;
             _userRepository = userRepository;
             _logger = logger;
+            _context = context;
+            _redis = redis;
 
             _jsonOptions = new JsonSerializerOptions
             {
@@ -186,6 +193,8 @@ namespace Bot.Infrastructure.Services
                     criteriaStepId, userId);
 
                 existing.CriteriaStepValueId = criteriaStepValueId;
+                existing.CriteriaStepValue = _context.CriteriaStepValues?.FirstOrDefault(c => c.Id == criteriaStepValueId);
+                existing.CriteriaStep = _context.CriteriaSteps?.FirstOrDefault(c => c.Id == criteriaStepId);
                 existing.CustomValue = customValue;
                 existing.UpdatedAt = DateTime.UtcNow;
             }
@@ -214,5 +223,30 @@ namespace Bot.Infrastructure.Services
         }
 
         private static string GetUserKey(long telegramId) => $"user:{telegramId}";
+
+        public async Task ClearCacheAsync()
+        {
+            try
+            {
+                var db = _redis.GetDatabase();
+                var endpoint = _redis.GetEndPoints().FirstOrDefault();
+
+                if (endpoint == null)
+                {
+                    _logger.LogError("Нет endpoints для Redis.");
+                    return;
+                }
+
+                var server = _redis.GetServer(endpoint);
+
+                await db.ExecuteAsync("FLUSHDB");
+                _logger.LogInformation("Redis успешно очищен.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка предварительной очистки Redis.");
+                throw;
+            }
+        }
     }
 }

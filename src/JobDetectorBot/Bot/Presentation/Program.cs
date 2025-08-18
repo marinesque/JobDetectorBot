@@ -1,6 +1,7 @@
 ﻿using Bot;
 using Bot.Domain.DataAccess.Repositories;
 using Bot.Infrastructure;
+using Bot.Infrastructure.Configuration;
 using Bot.Infrastructure.Interfaces;
 using Bot.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +57,7 @@ internal class Program()
         builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
             ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")));
 
+
         // Настройка сервисов
         Console.WriteLine("Настройка сервисов..");
         builder.Services.Configure<BotOptions>(telegramConfig);
@@ -66,12 +68,11 @@ internal class Program()
         builder.Services.AddScoped<IMessageHandler, MessageHandler>();
         builder.Services.AddScoped<ICriteriaStepsActualize, CriteriaStepsActualize>();
         builder.Services.AddHostedService<BotBackgroundService>();
-        /*builder.Services.AddHttpClient<IVacancySearchService, VacancySearchService>(client =>
+        builder.Services.AddHttpClient<IVacancySearchService, VacancySearchService>(client =>
         {
             client.BaseAddress = new Uri(builder.Configuration["VacancySearchService:BaseUrl"]);
         });
         builder.Services.AddScoped<IVacancySearchService, VacancySearchService>();
-        */
 
         builder.Logging.AddConsole();
         builder.Logging.AddDebug();
@@ -88,6 +89,27 @@ internal class Program()
         catch (Exception ex)
         {
             throw new FormatException($"Invalid connection string format: {connectionString}", ex);
+        }
+
+
+
+        using (var scope = host.Services.CreateScope())
+        {
+            var services = scope.ServiceProvider;
+
+            try
+            {
+                var redisOptions = builder.Configuration.GetSection("RedisOptions").Get<RedisOptions>();
+                if (redisOptions?.ClearOnStartup == true)
+                {
+                    var cacheService = services.GetRequiredService<IUserCacheService>();
+                    cacheService.ClearCacheAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Не удалось рестартануть Redis!");
+            }
         }
 
         // Миграция?

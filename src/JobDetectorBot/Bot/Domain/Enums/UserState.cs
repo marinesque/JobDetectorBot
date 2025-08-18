@@ -5,6 +5,7 @@
         None,                       // Нет активного сценария
         AwaitingCriteria,           // Режим сценария
         AwaitingCriteriaEdit,       // Ожидание редактирования критериев
-        AwaitingCustomValue         // Ожидание кастомного значения
+        AwaitingCustomValue,        // Ожидание кастомного значения
+        SearchingVacancies          // Просмотр подходящих вакансий
     }
 }

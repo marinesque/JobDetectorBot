@@ -10,7 +10,7 @@ namespace Bot.Domain.DataAccess.Dto
         public DateTime? LastUpdated { get; set; }
         public int CurrentCriteriaStep { get; set; }
         public int CurrentCriteriaStepValueIndex { get; set; }
-        public bool IsSingle { get; set; }
+        public bool IsSingle { get; set; } = false;
         public List<UserCriteriaStepValueDto> UserCriteriaStepValues { get; set; } = new();
 
         public static UserCacheDto FromUser(User user)
