@@ -4,11 +4,11 @@
     {
         public string Title { get; set; }
         public string CompanyName { get; set; }
-        public string Salary { get; set; }
         public string Location { get; set; }
-        public string Experience { get; set; }
-        public string EmploymentType { get; set; }
         public string Schedule { get; set; }
+        public object Salary { get; set; }
+        public string WorkFormat { get; set; }
         public string Url { get; set; }
+        public DateTime PublishedDate { get; set; }
     }
 }

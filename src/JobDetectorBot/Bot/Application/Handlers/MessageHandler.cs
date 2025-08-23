@@ -114,6 +114,7 @@ namespace Bot.Application.Handlers
                     case UserState.AwaitingCriteria:
                     case UserState.AwaitingCriteriaEdit:
                     case UserState.AwaitingCustomValue:
+                    case UserState.SearchingVacancies:
                         await HandleCriteriaInput(client, message, user, cancellationToken);
                         break;
                     default:
@@ -194,11 +195,20 @@ namespace Bot.Application.Handlers
 
         private async Task CancelScenario(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
         {
+            var output = user.State switch
+            {
+                UserState.AwaitingCriteria or UserState.AwaitingCriteriaEdit or UserState.AwaitingCustomValue
+                    => "Ввод критериев завершен.",
+                UserState.SearchingVacancies
+                    => "Поиск вакансий завершен.",
+                _ => string.Empty
+            };
+
             await ResetUserStateAsync(user);
 
             await client.SendMessage(
                 chatId: message.Chat.Id,
-                text: "Ввод критериев завершен.",
+                text: output,
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
 
@@ -608,7 +618,7 @@ namespace Bot.Application.Handlers
                         text: "⚠️ У вас нет сохраненных критериев поиска.\n\n" +
                              "Пожалуйста, сначала установите критерии через меню \"Мои критерии поиска\".",
                         replyMarkup: new ReplyKeyboardMarkup(new[]
-                                {
+                        {
                             new[] { new KeyboardButton("Мои критерии поиска") },
                             new[] { new KeyboardButton("Вернуться в меню") }
                         })
@@ -619,7 +629,6 @@ namespace Bot.Application.Handlers
                     return;
                 }
 
-
                 try
                 {
                     // "печатает..."
@@ -628,11 +637,10 @@ namespace Bot.Application.Handlers
                         action: ChatAction.Typing,
                         cancellationToken: cancellationToken);
 
-                    // Проверяем есть ли сохраненные вакансии
-                    if (user.CurrentCriteriaStepValueIndex != 0)
+                    // Если это первый запрос или нужно обновить результаты
+                    if (user.CurrentCriteriaStepValueIndex <= 1 || user.State != UserState.SearchingVacancies)
                     {
-                        // Первый запрос - ищем и кэшируем
-                        var request = CreateRequestFromUser(user);
+                        var request = await CreateRequestFromUser(user);
                         var hasResults = await _vacancyService.SearchAndCacheVacancies(user.TelegramId, request);
 
                         if (!hasResults)
@@ -652,38 +660,65 @@ namespace Bot.Application.Handlers
                             cancellationToken: cancellationToken);
                             return;
                         }
+
+                        // Сбрасываем индекс на первую страницу при новом поиске
+                        user.CurrentCriteriaStepValueIndex = 1;
                     }
 
-                    if (user.State != UserState.SearchingVacancies) user.CurrentCriteriaStepValueIndex = 1;
                     user.State = UserState.SearchingVacancies;
                     user.IsSingle = false;
                     user.LastUpdated = DateTime.UtcNow;
+                    await _userCacheService.SetUserAsync(user);
 
                     var page = user.CurrentCriteriaStepValueIndex;
                     var vacancies = await _vacancyService.GetVacanciesPage(user.TelegramId, page);
 
-                    // Формируем сообщение
-                    var messageText = string.Join("\n\n", vacancies.Select((v, i) =>
-                        $"#{i + 1 + (page - 1) * 5}\n" +
-                        $"<b>💼Должность:</b> {v.Title}\n" +
-                        $"<b>🏢 Компания:</b> {v.CompanyName}\n" +
-                        $"<b>💵 Зарплата:</b> {v.Salary}\n" +
-                        $"<b>🌍 Местоположение:</b> {v.Location}\n" +
-                        $"<b>🧑‍💼Опыт:</b> {v.Experience}\n" +
-                        $"<b>🕒Занятость:</b> {v.EmploymentType}\n" +
-                        $"<b>📅График:</b> {v.Schedule}\n" +
-                        $"🔗 <a href=\"{v.Url}\">Ссылка на вакансию</a>"));
+                    if (!vacancies.Any())
+                    {
+                        await client.SendMessage(
+                            chatId: message.Chat.Id,
+                            text: "Вакансии не найдены для этой страницы.",
+                            cancellationToken: cancellationToken);
+                        return;
+                    }
 
+                    // Отправляем каждую вакансию отдельным сообщением
+                    foreach (var vacancy in vacancies)
+                    {
+                        var messageText =
+                            $"<b>💼 Должность:</b> {vacancy.Title}\n" +
+                            $"<b>🏢 Компания:</b> {vacancy.CompanyName}\n" +
+                            $"<b>🌍 Местоположение:</b> {vacancy.Location}\n" +
+                            $"<b>💰 Зарплата:</b> {"Неизвестно" ?? "Не указана"}\n" +
+                            $"<b>📅 График:</b> {vacancy.Schedule}\n" +
+                            $"<b>🕒 Формат работы:</b> {vacancy.WorkFormat}\n" +
+                            $"🔗 <a href=\"{vacancy.Url}\">Ссылка на вакансию</a>";
+
+                        await client.SendMessage(
+                            chatId: message.Chat.Id,
+                            text: messageText,
+                            parseMode: ParseMode.Html,
+                            cancellationToken: cancellationToken);
+
+                        // Небольшая задержка между сообщениями
+                        await Task.Delay(300, cancellationToken);
+                    }
+
+                    // Создаем клавиатуру для навигации
                     var keyboard = new List<KeyboardButton[]>();
 
-                    var nextPage = await _vacancyService.GetVacanciesPage(user.TelegramId, page + 1);
-                    bool hasNext = nextPage.Any();
+                    // Проверяем наличие следующей страницы
+                    var nextPageVacancies = await _vacancyService.GetVacanciesPage(user.TelegramId, page + 1);
+                    bool hasNext = nextPageVacancies.Any();
 
-                    if (page > 1 && hasNext)
+                    // Проверяем наличие предыдущей страницы
+                    bool hasPrevious = page > 1;
+
+                    if (hasPrevious && hasNext)
                     {
                         keyboard.Add(new[] { new KeyboardButton("Назад"), new KeyboardButton("Далее") });
                     }
-                    else if (page > 1)
+                    else if (hasPrevious)
                     {
                         keyboard.Add(new[] { new KeyboardButton("Назад") });
                     }
@@ -694,16 +729,17 @@ namespace Bot.Application.Handlers
 
                     keyboard.Add(new[] { new KeyboardButton("Вернуться в меню") });
 
+                    // Отправляем сообщение с навигацией
                     await client.SendMessage(
                         chatId: message.Chat.Id,
-                        text: messageText,
-                        parseMode: ParseMode.Html,
+                        text: $"Продолжить поиск?",
                         replyMarkup: new ReplyKeyboardMarkup(keyboard) { ResizeKeyboard = true },
                         cancellationToken: cancellationToken);
+
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Ошибка при поиске вакансий для пользователя {user.TelegramId}");
+                    _logger.LogError(ex, $"Ошибка при поиске вакансий для пользователя {user.TelegramId}!");
 
                     await client.SendMessage(
                         chatId: message.Chat.Id,
@@ -724,8 +760,13 @@ namespace Bot.Application.Handlers
             }
         }
 
-        private UserCriteriaRequest CreateRequestFromUser(User user)
+        private async Task<UserCriteriaRequest> CreateRequestFromUser(User user)
         {
+            if (_criteriaSteps == null || !_criteriaSteps.Any())
+            {
+                await LoadCriteriaStepsAsync();
+            }
+
             if (user?.UserCriteriaStepValues == null)
             {
                 return new UserCriteriaRequest
@@ -736,18 +777,46 @@ namespace Bot.Application.Handlers
                 };
             }
 
+            var userCriteria = new List<UserCriteriaItem>();
+
+            foreach (var userValue in user.UserCriteriaStepValues)
+            {
+                var criteriaStep = _criteriaSteps.FirstOrDefault(cs => cs.Id == userValue.CriteriaStepId);
+                if (criteriaStep == null) continue;
+
+                string value;
+                bool isCustom;
+
+                if (!string.IsNullOrEmpty(userValue.CustomValue))
+                {
+                    value = userValue.CustomValue;
+                    isCustom = true;
+                }
+                else if (userValue.CriteriaStepValue != null)
+                {
+                    value = userValue.CriteriaStepValue.Value;
+                    isCustom = false;
+                }
+                else
+                {
+                    continue;
+                }
+
+                userCriteria.Add(new UserCriteriaItem
+                {
+                    Name = criteriaStep.Name,
+                    Id = value,
+                    IsCustom = isCustom,
+                    IsMapped = criteriaStep.IsMapped,
+                    MainDictionary = criteriaStep.MainDictionary
+                });
+            }
+
             return new UserCriteriaRequest
             {
                 UserId = user.TelegramId,
                 RequestDate = DateTime.UtcNow,
-                UserCriteria = user.UserCriteriaStepValues.Select(ucsv => new UserCriteriaItem
-                {
-                    Name = ucsv.CriteriaStep?.Name ?? string.Empty,
-                    Id = ucsv.CriteriaStepValue?.Value ?? ucsv.CustomValue ?? string.Empty,
-                    IsCustom = !string.IsNullOrEmpty(ucsv.CustomValue),
-                    IsMapped = ucsv.CriteriaStep?.IsMapped ?? false,
-                    MainDictionary = ucsv.CriteriaStep?.MainDictionary
-                }).ToList()
+                UserCriteria = userCriteria
             };
         }
     }
