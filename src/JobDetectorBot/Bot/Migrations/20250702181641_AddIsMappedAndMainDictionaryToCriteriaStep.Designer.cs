@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -10,9 +11,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bot.Migrations
 {
     [DbContext(typeof(BotDbContext))]
-    partial class BotDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250702181641_AddIsMappedAndMainDictionaryToCriteriaStep")]
+    partial class AddIsMappedAndMainDictionaryToCriteriaStep
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -42,7 +45,7 @@ namespace Bot.Migrations
                         .HasComment("Маппинг с сервисом вакансий");
 
                     b.Property<string>("MainDictionary")
-                        .HasColumnType("text")
+                        .HasColumnType("jsonb")
                         .HasColumnName("MainDictionary")
                         .HasComment("Основной словарь значений");
 

@@ -1,71 +1,274 @@
 {
   "CriteriaSteps": [
     {
-      "Name": "Region",
+      "Name": "area",
       "Prompt": "Регион",
       "IsCustom": true,
       "OrderBy": 10,
       "Type": "String",
+      "IsMapped": true,
       "CriteriaStepValues": [
         {
           "Prompt": "Москва",
-          "Value": "Москва",
+          "Value": "1",
           "OrderBy": 10
         },
         {
           "Prompt": "Санкт-Петербург",
-          "Value": "Санкт-Петербург",
+          "Value": "2",
           "OrderBy": 20
         },
         {
-          "Prompt": "Калининград",
-          "Value": "Калининград"
-        },
-        {
-          "Prompt": "Уфа",
-          "Value": "Уфа"
+          "Prompt": "Новосибирск",
+          "Value": "4"
         },
         {
           "Prompt": "Екатеринбург",
-          "Value": "Екатеринбург"
+          "Value": "3"
+        },
+        {
+          "Prompt": "Казань",
+          "Value": "88"
+        },
+        {
+          "Prompt": "Нижний Новгород",
+          "Value": "66"
         },
         {
           "Prompt": "Челябинск",
-          "Value": "Челябинск"
+          "Value": "104"
+        },
+        {
+          "Prompt": "Самара",
+          "Value": "78"
+        },
+        {
+          "Prompt": "Омск",
+          "Value": "68"
+        },
+        {
+          "Prompt": "Ростов-на-Дону",
+          "Value": "76"
+        },
+        {
+          "Prompt": "Уфа",
+          "Value": "99"
+        },
+        {
+          "Prompt": "Красноярск",
+          "Value": "54"
+        },
+        {
+          "Prompt": "Пермь",
+          "Value": "72"
+        },
+        {
+          "Prompt": "Воронеж",
+          "Value": "26"
+        },
+        {
+          "Prompt": "Волгоград",
+          "Value": "24"
+        },
+        {
+          "Prompt": "Краснодар",
+          "Value": "53"
+        },
+        {
+          "Prompt": "Саратов",
+          "Value": "79"
+        },
+        {
+          "Prompt": "Тюмень",
+          "Value": "95"
+        },
+        {
+          "Prompt": "Тольятти",
+          "Value": "212"
+        },
+        {
+          "Prompt": "Ижевск",
+          "Value": "96"
+        },
+        {
+          "Prompt": "Барнаул",
+          "Value": "11"
+        },
+        {
+          "Prompt": "Ульяновск",
+          "Value": "98"
+        },
+        {
+          "Prompt": "Иркутск",
+          "Value": "35"
+        },
+        {
+          "Prompt": "Хабаровск",
+          "Value": "102"
         }
       ]
     },
     {
-      "Name": "Post",
+      "Name": "post",
       "Prompt": "Должность",
       "IsCustom": true,
       "OrderBy": 20,
       "Type": "String",
+      "IsMapped": false,
       "CriteriaStepValues": [
         {
-          "Prompt": "Менеджер",
-          "Value": "Менеджер"
+          "Prompt": "Менеджер по продажам",
+          "Value": "Менеджер по продажам"
+        },
+        {
+          "Prompt": "Менеджер по клиентам",
+          "Value": "Менеджер по клиентам"
+        },
+        {
+          "Prompt": "Продавец-консультант",
+          "Value": "Продавец-консультант"
+        },
+        {
+          "Prompt": "Продавец-кассир",
+          "Value": "Продавец-кассир"
+        },
+        {
+          "Prompt": "Водитель",
+          "Value": "Водитель"
+        },
+        {
+          "Prompt": "Оператор колл-центра",
+          "Value": "Оператор колл-центра"
+        },
+        {
+          "Prompt": "IT-специалист",
+          "Value": "IT-специалист"
         },
         {
           "Prompt": "Разработчик",
           "Value": "Разработчик"
         },
         {
-          "Prompt": "Грузчик",
-          "Value": "Грузчик"
+          "Prompt": "Аналитик данных",
+          "Value": "Аналитик данных"
         },
         {
-          "Prompt": "Директор",
-          "Value": "Директор"
+          "Prompt": "Кибербезопасность",
+          "Value": "Кибербезопасность"
+        },
+        {
+          "Prompt": "UX/UI дизайнер",
+          "Value": "UX/UI дизайнер"
+        },
+        {
+          "Prompt": "Инженер",
+          "Value": "Инженер"
+        },
+        {
+          "Prompt": "Врач",
+          "Value": "Врач"
+        },
+        {
+          "Prompt": "Медработник",
+          "Value": "Медработник"
+        },
+        {
+          "Prompt": "Менеджер проектов",
+          "Value": "Менеджер проектов"
+        },
+        {
+          "Prompt": "Логист",
+          "Value": "Логист"
+        },
+        {
+          "Prompt": "Специалист онлайн-образования",
+          "Value": "Специалист онлайн-образования"
+        },
+        {
+          "Prompt": "Эколог",
+          "Value": "Эколог"
+        },
+        {
+          "Prompt": "Специалист по ВИЭ",
+          "Value": "Специалист по ВИЭ"
+        },
+        {
+          "Prompt": "Веб-разработчик",
+          "Value": "Веб-разработчик"
+        },
+        {
+          "Prompt": "Графический дизайнер",
+          "Value": "Графический дизайнер"
+        },
+        {
+          "Prompt": "Интернет-маркетолог",
+          "Value": "Интернет-маркетолог"
+        },
+        {
+          "Prompt": "Продакт-менеджер",
+          "Value": "Продакт-менеджер"
+        },
+        {
+          "Prompt": "Руководитель цифровой трансформации",
+          "Value": "Руководитель цифровой трансформации"
+        },
+        {
+          "Prompt": "Data-инженер",
+          "Value": "Data-инженер"
+        },
+        {
+          "Prompt": "Психолог",
+          "Value": "Психолог"
+        },
+        {
+          "Prompt": "Архитектор",
+          "Value": "Архитектор"
+        },
+        {
+          "Prompt": "Агроном",
+          "Value": "Агроном"
+        },
+        {
+          "Prompt": "Ветеринар",
+          "Value": "Ветеринар"
+        },
+        {
+          "Prompt": "Бухгалтер",
+          "Value": "Бухгалтер"
+        },
+        {
+          "Prompt": "Финансист",
+          "Value": "Финансист"
+        },
+        {
+          "Prompt": "Продавец-консультант",
+          "Value": "Продавец-консультант"
+        },
+        {
+          "Prompt": "Курьер",
+          "Value": "Курьер"
+        },
+        {
+          "Prompt": "Сборщик заказов",
+          "Value": "Сборщик заказов"
+        },
+        {
+          "Prompt": "Повар",
+          "Value": "Повар"
+        },
+        {
+          "Prompt": "Администратор",
+          "Value": "Администратор"
         }
       ]
     },
     {
-      "Name": "Salary",
+      "Name": "salary",
       "Prompt": "Зарплата",
       "IsCustom": true,
       "OrderBy": 30,
-      "Type": "Decimal",
+      "Type": "Int",
+      "IsMapped": false,
       "CriteriaStepValues": [
         {
           "Prompt": "0",
@@ -73,160 +276,150 @@
           "OrderBy": 10
         },
         {
-          "Prompt": "от 30.000р.",
+          "Prompt": "30.000р.",
           "Value": "30000",
           "OrderBy": 20
         },
         {
-          "Prompt": "от 50.000р.",
+          "Prompt": "50.000р.",
           "Value": "50000",
           "OrderBy": 30
         },
         {
-          "Prompt": "от 100.000р.",
+          "Prompt": "100.000р.",
           "Value": "100000",
           "OrderBy": 40
         },
         {
-          "Prompt": "от 200.000р.",
+          "Prompt": "200.000р.",
           "Value": "200000",
           "OrderBy": 50
         },
         {
-          "Prompt": "от 300.000р.",
+          "Prompt": "300.000р.",
           "Value": "300000",
           "OrderBy": 60
         },
         {
-          "Prompt": "от 400.000р.",
+          "Prompt": "400.000р.",
           "Value": "400000",
           "OrderBy": 70
         },
         {
-          "Prompt": "от 500.000р.",
+          "Prompt": "500.000р.",
           "Value": "500000",
           "OrderBy": 80
         }
       ]
     },
     {
-      "Name": "Experience",
+      "Name": "experience",
       "Prompt": "Опыт работы",
       "IsCustom": false,
       "OrderBy": 40,
-      "Type": "Int",
+      "Type": "String",
+      "IsMapped": true,
       "CriteriaStepValues": [
         {
-          "Prompt": "Без опыта",
-          "Value": "0",
+          "Prompt": "Нет опыта",
+          "Value": "noExperience",
           "OrderBy": 10
         },
         {
-          "Prompt": "До 1 года",
-          "Value": "1",
+          "Prompt": "От 1 года до 3 лет",
+          "Value": "between1And3",
           "OrderBy": 20
         },
         {
-          "Prompt": "От 1 до 3 лет",
-          "Value": "3",
+          "Prompt": "От 3 до 6 лет",
+          "Value": "between3And6",
           "OrderBy": 30
         },
         {
-          "Prompt": "От 3 до 6 лет",
-          "Value": "6",
+          "Prompt": "Более 6 лет",
+          "Value": "moreThan6",
           "OrderBy": 40
-        },
-        {
-          "Prompt": "От 6 до 10 лет",
-          "Value": "10",
-          "OrderBy": 50
-        },
-        {
-          "Prompt": "Более 10 лет",
-          "Value": "100",
-          "OrderBy": 60
         }
       ]
     },
     {
-      "Name": "WorkType",
+      "Name": "employment",
       "Prompt": "Занятость",
       "IsCustom": false,
       "OrderBy": 50,
       "Type": "String",
+      "IsMapped": true,
       "CriteriaStepValues": [
         {
-          "Prompt": "Полная",
-          "Value": "Полная",
+          "Prompt": "Полная занятость",
+          "Value": "full",
           "OrderBy": 10
         },
         {
-          "Prompt": "Частичная",
-          "Value": "Частичная",
+          "Prompt": "Частичная занятость",
+          "Value": "part",
           "OrderBy": 20
         },
         {
           "Prompt": "Проектная работа",
-          "Value": "Проектная работа",
+          "Value": "project",
           "OrderBy": 40
         },
         {
           "Prompt": "Волонтерство",
-          "Value": "Волонтерство",
-          "OrderBy": 60
-        },
-        {
-          "Prompt": "Стажировка",
-          "Value": "Стажировка",
+          "Value": "volunteer",
           "OrderBy": 50
         },
         {
-          "Prompt": "Совместительство",
-          "Value": "Совместительство",
-          "OrderBy": 30
+          "Prompt": "Стажировка",
+          "Value": "probation",
+          "OrderBy": 60
         }
       ]
     },
     {
-      "Name": "Schedule",
+      "Name": "schedule",
       "Prompt": "График работы",
       "IsCustom": false,
       "OrderBy": 60,
       "Type": "String",
+      "IsMapped": true,
       "CriteriaStepValues": [
         {
           "Prompt": "Полный день",
-          "Value": "Полный день",
+          "Value": "fullDay",
           "OrderBy": 10
         },
         {
           "Prompt": "Сменный график",
-          "Value": "Сменный график",
+          "Value": "shift",
           "OrderBy": 20
         },
         {
           "Prompt": "Гибкий график",
-          "Value": "Гибкий график",
-          "OrderBy": 40
-        },
-        {
-          "Prompt": "Удаленная работа",
-          "Value": "Удаленная работа",
+          "Value": "flexible",
           "OrderBy": 30
         },
         {
+          "Prompt": "Удаленная работа",
+          "Value": "remote",
+          "OrderBy": 40
+        },
+        {
           "Prompt": "Вахтовый метод",
-          "Value": "Вахтовый метод",
+          "Value": "flyInFlyOut",
           "OrderBy": 50
         }
       ]
     },
     {
-      "Name": "Disability",
+      "Name": "accept_handicapped",
       "Prompt": "Доступно для людей с инвалидностью",
       "IsCustom": false,
       "OrderBy": 70,
       "Type": "Boolean",
+      "IsMapped": true,
+      "MainDictionary": "vacancy_label",
       "CriteriaStepValues": [
         {
           "Prompt": "Да",
@@ -241,11 +434,13 @@
       ]
     },
     {
-      "Name": "ForChildren",
+      "Name": "accept_kids",
       "Prompt": "Доступно для людей от 14 лет",
       "IsCustom": false,
       "OrderBy": 80,
       "Type": "Boolean",
+      "IsMapped": true,
+      "MainDictionary": "vacancy_label",
       "CriteriaStepValues": [
         {
           "Prompt": "Да",

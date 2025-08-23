@@ -1,20 +1,19 @@
-# образ .NET SDK для сборки
+п»їFROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+EXPOSE 80
+
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-
-# копирование файлов и восстановление зависимостей
+COPY ["Bot.csproj", "."]
+RUN dotnet restore "Bot.csproj"
 COPY . .
-RUN dotnet restore
+WORKDIR "/src"
+RUN dotnet build "Bot.csproj" -c Release -o /app/build
 
-# сборка проекта
-RUN dotnet publish -c Release -o /app
+FROM build AS publish
+RUN dotnet publish "Bot.csproj" -c Release -o /app/publish
 
-# .NET Runtime образ
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM base AS final
 WORKDIR /app
-
-# кпируем собранные файлы из сборки
-COPY --from=build /app .
-
-# точка входа
+COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Bot.dll"]
