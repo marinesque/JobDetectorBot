@@ -184,6 +184,12 @@ namespace Bot.Infrastructure.Services
                 return user;
             }
 
+            var criteriaStepValue = criteriaStepValueId.HasValue
+                ? await _context.CriteriaStepValues.FindAsync(criteriaStepValueId.Value)
+                : null;
+
+            var criteriaStep = await _context.CriteriaSteps.FindAsync(criteriaStepId);
+
             var existing = user.UserCriteriaStepValues?
                 .FirstOrDefault(x => x.CriteriaStepId == criteriaStepId);
 
@@ -193,8 +199,8 @@ namespace Bot.Infrastructure.Services
                     criteriaStepId, userId);
 
                 existing.CriteriaStepValueId = criteriaStepValueId;
-                existing.CriteriaStepValue = _context.CriteriaStepValues?.FirstOrDefault(c => c.Id == criteriaStepValueId);
-                existing.CriteriaStep = _context.CriteriaSteps?.FirstOrDefault(c => c.Id == criteriaStepId);
+                existing.CriteriaStepValue = criteriaStepValue;
+                existing.CriteriaStep = criteriaStep;
                 existing.CustomValue = customValue;
                 existing.UpdatedAt = DateTime.UtcNow;
             }
@@ -208,6 +214,8 @@ namespace Bot.Infrastructure.Services
                 {
                     CriteriaStepId = criteriaStepId,
                     CriteriaStepValueId = criteriaStepValueId,
+                    CriteriaStepValue = criteriaStepValue,
+                    CriteriaStep = criteriaStep,
                     CustomValue = customValue,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow

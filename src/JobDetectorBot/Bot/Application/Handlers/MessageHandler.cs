@@ -480,7 +480,7 @@ namespace Bot.Application.Handlers
 
         private async Task ResetUserStateAsync(Domain.DataAccess.Model.User user)
         {
-            // Обнуляем состояние пользователя
+            // Обнуляем состояние юзера
             user.State = UserState.None;
             user.CurrentCriteriaStep = 0;
             user.CurrentCriteriaStepValueIndex = 0;
@@ -537,7 +537,7 @@ namespace Bot.Application.Handlers
                     }
                     else if (userValue.CriteriaStepValue != null)
                     {
-                        valueText = userValue.CriteriaStepValue.Prompt;
+                        valueText = userValue.CriteriaStepValue.Prompt ?? "Не указано";
                     }
                     else
                     {
@@ -682,7 +682,6 @@ namespace Bot.Application.Handlers
                         return;
                     }
 
-                    // Отправляем каждую вакансию отдельным сообщением
                     foreach (var vacancy in vacancies)
                     {
                         var messageText =
@@ -700,18 +699,16 @@ namespace Bot.Application.Handlers
                             parseMode: ParseMode.Html,
                             cancellationToken: cancellationToken);
 
-                        // Небольшая задержка между сообщениями
+                        // Задержечка
                         await Task.Delay(300, cancellationToken);
                     }
 
-                    // Создаем клавиатуру для навигации
                     var keyboard = new List<KeyboardButton[]>();
 
-                    // Проверяем наличие следующей страницы
+                    // Имитируем пагинацию
                     var nextPageVacancies = await _vacancyService.GetVacanciesPage(user.TelegramId, page + 1);
                     bool hasNext = nextPageVacancies.Any();
 
-                    // Проверяем наличие предыдущей страницы
                     bool hasPrevious = page > 1;
 
                     if (hasPrevious && hasNext)
@@ -729,7 +726,6 @@ namespace Bot.Application.Handlers
 
                     keyboard.Add(new[] { new KeyboardButton("Вернуться в меню") });
 
-                    // Отправляем сообщение с навигацией
                     await client.SendMessage(
                         chatId: message.Chat.Id,
                         text: $"Продолжить поиск?",
