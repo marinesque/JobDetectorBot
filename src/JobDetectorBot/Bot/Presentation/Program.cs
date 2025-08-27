@@ -1,4 +1,7 @@
 ﻿using Bot;
+using Bot.Application.Handlers;
+using Bot.Application.Interfaces;
+using Bot.Application.Strategies;
 using Bot.Domain.DataAccess.Repositories;
 using Bot.Infrastructure;
 using Bot.Infrastructure.Configuration;
@@ -66,6 +69,13 @@ internal class Program()
         builder.Services.AddScoped<CriteriaStepRepository>();
         builder.Services.AddTransient<DataSeeder>();
         builder.Services.AddScoped<IMessageHandler, MessageHandler>();
+
+        builder.Services.AddScoped<IUserStateStrategy, NoneStateStrategy>();
+        builder.Services.AddScoped<IUserStateStrategy, AwaitingCriteriaStrategy>();
+        builder.Services.AddScoped<IUserStateStrategy, SearchingVacanciesStrategy>();
+
+        builder.Services.AddScoped<IUserStateManager, UserStateManager>();
+
         builder.Services.AddScoped<ICriteriaStepsActualize, CriteriaStepsActualize>();
         builder.Services.AddHostedService<BotBackgroundService>();
         builder.Services.AddHttpClient<IVacancySearchService, VacancySearchService>(client =>

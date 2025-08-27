@@ -1,4 +1,6 @@
-﻿using Bot.Domain.DataAccess.Model;
+﻿using Bot.Application.Interfaces;
+using Bot.Application.Strategies;
+using Bot.Domain.DataAccess.Model;
 using Bot.Domain.DataAccess.Repositories;
 using Bot.Domain.Enums;
 using Bot.Domain.Request.VacancySearch;
@@ -25,6 +27,8 @@ namespace Bot.Application.Handlers
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IUserCacheService _userCacheService;
         private readonly IVacancySearchService _vacancyService;
+        private readonly IEnumerable<IUserStateStrategy> _strategies;
+        private readonly IUserStateManager _userStateManager;
 
         private List<CriteriaStep> _criteriaSteps;
 
@@ -43,7 +47,9 @@ namespace Bot.Application.Handlers
             BotDbContext context,
             IServiceScopeFactory serviceScopeFactory,
             IUserCacheService userCacheService,
-            IVacancySearchService vacancySearchService)
+            IVacancySearchService vacancySearchService,
+            IEnumerable<IUserStateStrategy> strategies,
+            IUserStateManager userStateManager)
         {
             _logger = logger;
             _userRepository = userRepository;
@@ -52,11 +58,11 @@ namespace Bot.Application.Handlers
             _serviceScopeFactory = serviceScopeFactory;
             _userCacheService = userCacheService;
             _vacancyService = vacancySearchService;
+            _strategies = strategies;
+            _userStateManager = userStateManager;
         }
 
-        //private List<CriteriaStep> GetCriteriaSteps() => _criteriaStepsActualizer.GetCriteriaSteps();
         private async Task LoadCriteriaStepsAsync() => this._criteriaSteps = await _criteriaStepRepository.GetAllCriteriaStepsAsync();
-
 
         public async Task HandleMessageAsync(ITelegramBotClient client, Update update, CancellationToken cancellationToken)
         {
@@ -89,18 +95,20 @@ namespace Bot.Application.Handlers
 
                     await _userCacheService.SetUserAsync(user);
                     await _userCacheService.SyncToDatabaseAsync(user);
-                    //await _userRepository.AddOrUpdateUserAsync(user);
 
                     await client.SendMessage(
                         chatId: chatId,
-                        text: "Команда Безработных.NET приветствует Вас!" +
+                        text: "Команда Безработных.NET приветствует Вас! " +
                               "Давайте найдем вакансию Вашей мечты вместе. Приступим!)",
                         cancellationToken: cancellationToken);
 
                     await ShowMainMenu(client, chatId, cancellationToken);
-
                     return;
                 }
+
+                var newState = await _userStateManager.DetermineNextStateAsync(user, message);
+                if (newState != user.State)
+                    await _userStateManager.UpdateUserStateAsync(user, newState);
 
                 if (user.State != UserState.None && DateTime.UtcNow - user.LastUpdated > TimeSpan.FromMinutes(10))
                 {
@@ -109,17 +117,21 @@ namespace Bot.Application.Handlers
                     return;
                 }
 
-                switch (user.State)
+                _logger.LogInformation($"Состояние юзера {username}:\n" +
+                    $"  > State: {user.State.ToString()},\n" +
+                    $"  > CurrentCriteriaStep: {user.CurrentCriteriaStep.ToString()},\n" +
+                    $"  > CurrentCriteriaStepValueIndex: {user.CurrentCriteriaStepValueIndex.ToString()},\n" +
+                    $"  > IsSingle: {user.IsSingle.ToString()},\n");
+
+                var strategy = _strategies.FirstOrDefault(s => s.CanHandle(user.State));
+                if (strategy != null)
                 {
-                    case UserState.AwaitingCriteria:
-                    case UserState.AwaitingCriteriaEdit:
-                    case UserState.AwaitingCustomValue:
-                    case UserState.SearchingVacancies:
-                        await HandleCriteriaInput(client, message, user, cancellationToken);
-                        break;
-                    default:
-                        await HandleDefaultInput(client, message, user, cancellationToken);
-                        break;
+                    await strategy.HandleAsync(client, message, user, cancellationToken);
+                }
+                else
+                {
+                    _logger.LogWarning($"Не найдена стратегия для состояния: {user.State}");
+                    await ShowMainMenu(client, chatId, cancellationToken);
                 }
             }
             catch (Exception ex)
@@ -128,7 +140,7 @@ namespace Bot.Application.Handlers
             }
         }
 
-        private async Task ShowMainMenu(ITelegramBotClient client, long chatId, CancellationToken cancellationToken)
+        public async Task ShowMainMenu(ITelegramBotClient client, long chatId, CancellationToken cancellationToken)
         {
             var replyKeyboard = new ReplyKeyboardMarkup(new[]
             {
@@ -149,48 +161,149 @@ namespace Bot.Application.Handlers
                 cancellationToken: cancellationToken);
         }
 
-        private async Task HandleDefaultInput(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
-        {
-            if (message.Text is not { } messageText)
-                return;
-
-            switch (messageText)
-            {
-                case "Начать новый поиск":
-                    await StartScenario(client, message, user, cancellationToken);
-                    break;
-                case "Искать вакансии":
-                    await SearchVacancies(client, message, user, cancellationToken);
-                    break;
-                case "Мои критерии поиска":
-                    await ShowUserCriteria(client, message, user, cancellationToken);
-                    break;
-                case "Подписка":
-                    await HandleSubscription(client, message, user, cancellationToken);
-                    break;
-                default:
-                    // Обработка неизвестных команд
-                    await ShowMainMenu(client, message.Chat.Id, cancellationToken);
-                    break;
-            }
-        }
-
-        private async Task StartScenario(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
+        public async Task HandleCriteriaInput(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
         {
             if (_criteriaSteps == null || !_criteriaSteps.Any())
             {
                 await LoadCriteriaStepsAsync();
             }
 
-            user.State = UserState.AwaitingCriteria; // Вводим критерии
-            user.CurrentCriteriaStep = 0; // Шаг
-            user.CurrentCriteriaStepValueIndex = 0; // Страница ответа
-            user.LastUpdated = DateTime.UtcNow;
-            await _userCacheService.SetUserAsync(user);
-            await _userCacheService.SyncToDatabaseAsync(user);
-            //await _userRepository.AddOrUpdateUserAsync(user);
+            if (message.Text == "Вернуться в меню")
+            {
+                user.IsSingle = false;
+                user.LastUpdated = DateTime.UtcNow;
+                await _userCacheService.SetUserAsync(user);
+                await CancelScenario(client, message, user, cancellationToken);
+                await ShowMainMenu(client, message.Chat.Id, cancellationToken);
+                return;
+            }
 
-            await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+            if (message.Text == "Назад")
+            {
+                if (user.State == UserState.SearchingVacancies)
+                    user.CurrentCriteriaStepValueIndex -= 1;
+                else user.CurrentCriteriaStepValueIndex = Math.Max(0, user.CurrentCriteriaStepValueIndex - 4);
+                user.LastUpdated = DateTime.UtcNow;
+                await _userCacheService.SetUserAsync(user);
+                if (user.State == UserState.SearchingVacancies)
+                    await SearchVacancies(client, message, user, cancellationToken);
+                else await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+                return;
+            }
+
+            if (message.Text == "Далее")
+            {
+                if (user.State == UserState.SearchingVacancies)
+                    user.CurrentCriteriaStepValueIndex += 1;
+                else user.CurrentCriteriaStepValueIndex += 4;
+                user.LastUpdated = DateTime.UtcNow;
+                await _userCacheService.SetUserAsync(user);
+                if (user.State == UserState.SearchingVacancies)
+                    await SearchVacancies(client, message, user, cancellationToken);
+                else await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+                return;
+            }
+
+            if (message.Text == "Свое значение")
+            {
+                var currentStep = _criteriaSteps[user.CurrentCriteriaStep];
+                if (currentStep.IsCustom)
+                {
+                    user.State = UserState.AwaitingCustomValue;
+                    user.LastUpdated = DateTime.UtcNow;
+                    await _userCacheService.SetUserAsync(user);
+
+                    await client.SendMessage(
+                        chatId: message.Chat.Id,
+                        text: "Пожалуйста, введите свое значение:",
+                        replyMarkup: new ReplyKeyboardRemove(),
+                        cancellationToken: cancellationToken);
+                    return;
+                }
+
+                await client.SendMessage(
+                    chatId: message.Chat.Id,
+                    text: "Ввод своего значения недоступен для этого шага.",
+                    cancellationToken: cancellationToken);
+                await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+                return;
+            }
+
+            var step = _criteriaSteps[user.CurrentCriteriaStep];
+
+            var criteriaStep = await _context.CriteriaSteps
+                .Include(cs => cs.CriteriaStepValues)
+                .FirstOrDefaultAsync(cs => cs.Id == step.Id);
+
+            if (criteriaStep == null)
+            {
+                await client.SendMessage(
+                    chatId: message.Chat.Id,
+                    text: "Ошибка: критерий поиска не найден.",
+                    cancellationToken: cancellationToken);
+                return;
+            }
+
+            if (user.State == UserState.AwaitingCustomValue)
+            {
+                user = await _userCacheService.UpdateUserCriteriaAsync(
+                    user.TelegramId,
+                    step.Id,
+                    null,
+                    message.Text);
+
+                user.State = UserState.AwaitingCriteria;
+                user.LastUpdated = DateTime.UtcNow;
+                await _userCacheService.SetUserAsync(user);
+            }
+            else
+            {
+                var selectedValue = criteriaStep.CriteriaStepValues
+                    .FirstOrDefault(csv => csv.Prompt == message.Text);
+
+                if (selectedValue == null && !step.IsCustom)
+                {
+                    await client.SendMessage(
+                        chatId: message.Chat.Id,
+                        text: "Пожалуйста, выберите значение из предложенных.",
+                        cancellationToken: cancellationToken);
+                    await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+                    return;
+                }
+
+                user = await _userCacheService.UpdateUserCriteriaAsync(
+                    user.TelegramId,
+                    step.Id,
+                    selectedValue?.Id);
+            }
+
+            if (user.State == UserState.AwaitingCriteriaEdit || user.IsSingle == true)
+            {
+                await ResetUserStateAsync(user);
+                await ShowUserCriteria(client, message, user, cancellationToken);
+            }
+            else
+            {
+                user.CurrentCriteriaStep++;
+                user.CurrentCriteriaStepValueIndex = 0;
+                user.LastUpdated = DateTime.UtcNow;
+                await _userCacheService.SetUserAsync(user);
+
+                if (user.CurrentCriteriaStep >= _criteriaSteps.Count)
+                {
+                    await ResetUserStateAsync(user);
+
+                    await client.SendMessage(
+                        chatId: message.Chat.Id,
+                        text: "Ввод критериев завершен. Вы можете отредактировать их позже.",
+                        cancellationToken: cancellationToken);
+
+                    await ShowMainMenu(client, message.Chat.Id, cancellationToken);
+                    return;
+                }
+
+                await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
+            }
         }
 
         private async Task CancelScenario(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
@@ -211,10 +324,9 @@ namespace Bot.Application.Handlers
                 text: output,
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken);
-
         }
 
-        private async Task SendStepMessage(ITelegramBotClient client, long chatId, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
+        public async Task SendStepMessage(ITelegramBotClient client, long chatId, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
         {
             var step = _criteriaSteps[user.CurrentCriteriaStep];
 
@@ -232,9 +344,9 @@ namespace Bot.Application.Handlers
             }
 
             var sortedValues = criteriaStep.CriteriaStepValues
-                .OrderBy(csv => csv.OrderBy.HasValue ? 0 : 1) // Сначала значения с заполненным OrderBy
-                .ThenBy(csv => csv.OrderBy) // Затем сортируем по OrderBy
-                .ThenBy(csv => ConvertValue(csv.Value, criteriaStep.Type)) // Затем по Value, сконвертированному в нужный тип
+                .OrderBy(csv => csv.OrderBy.HasValue ? 0 : 1)
+                .ThenBy(csv => csv.OrderBy)
+                .ThenBy(csv => ConvertValue(csv.Value, criteriaStep.Type))
                 .Skip(user.CurrentCriteriaStepValueIndex)
                 .Take(4)
                 .ToList();
@@ -244,7 +356,7 @@ namespace Bot.Application.Handlers
 
             foreach (var value in sortedValues)
             {
-                row.Add(new KeyboardButton(value.Prompt)); // Используем Prompt для отображения
+                row.Add(new KeyboardButton(value.Prompt));
                 if (row.Count == 2)
                 {
                     replyKeyboardButtonList.Add(row.ToArray());
@@ -297,7 +409,6 @@ namespace Bot.Application.Handlers
                 cancellationToken: cancellationToken);
         }
 
-        // Метод для конвертации значения в нужный тип
         private object ConvertValue(string value, string type)
         {
             return type.ToLower() switch
@@ -315,172 +426,8 @@ namespace Bot.Application.Handlers
             };
         }
 
-        private async Task HandleCriteriaInput(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
+        public async Task ResetUserStateAsync(Domain.DataAccess.Model.User user)
         {
-            if (_criteriaSteps == null || !_criteriaSteps.Any())
-            {
-                await LoadCriteriaStepsAsync();
-            }
-
-            if (message.Text == "Вернуться в меню")
-            {
-                user.IsSingle = false;
-                user.LastUpdated = DateTime.UtcNow;
-                await _userCacheService.SetUserAsync(user);
-                //await _userRepository.AddOrUpdateUserAsync(user);
-                await CancelScenario(client, message, user, cancellationToken);
-                await ShowMainMenu(client, message.Chat.Id, cancellationToken);
-                return;
-            }
-
-            if (message.Text == "Назад")
-            {
-                if (user.State == UserState.SearchingVacancies)
-                    user.CurrentCriteriaStepValueIndex -= 1;
-                else user.CurrentCriteriaStepValueIndex = Math.Max(0, user.CurrentCriteriaStepValueIndex - 4);
-                user.LastUpdated = DateTime.UtcNow;
-                await _userCacheService.SetUserAsync(user);
-                //await _userRepository.AddOrUpdateUserAsync(user);
-                if (user.State == UserState.SearchingVacancies)
-                    await SearchVacancies(client, message, user, cancellationToken);
-                else await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
-                return;
-            }
-
-            if (message.Text == "Далее")
-            {
-                if (user.State == UserState.SearchingVacancies)
-                    user.CurrentCriteriaStepValueIndex += 1;
-                else user.CurrentCriteriaStepValueIndex += 4;
-                user.LastUpdated = DateTime.UtcNow;
-                await _userCacheService.SetUserAsync(user);
-                //await _userRepository.AddOrUpdateUserAsync(user);
-                if (user.State == UserState.SearchingVacancies)
-                    await SearchVacancies(client, message, user, cancellationToken);
-                else await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
-                return;
-            }
-
-            if (message.Text == "Свое значение")
-            {
-                var currentStep = _criteriaSteps[user.CurrentCriteriaStep];
-                if (currentStep.IsCustom)
-                {
-                    user.State = UserState.AwaitingCustomValue;
-                    user.LastUpdated = DateTime.UtcNow;
-                    await _userCacheService.SetUserAsync(user);
-                    //await _userRepository.AddOrUpdateUserAsync(user);
-
-                    await client.SendMessage(
-                        chatId: message.Chat.Id,
-                        text: "Пожалуйста, введите свое значение:",
-                        replyMarkup: new ReplyKeyboardRemove(),
-                        cancellationToken: cancellationToken);
-                    return;
-                }
-
-                await client.SendMessage(
-                    chatId: message.Chat.Id,
-                    text: "Ввод своего значения недоступен для этого шага.",
-                    cancellationToken: cancellationToken);
-                await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
-                return;
-            }
-
-            var step = _criteriaSteps[user.CurrentCriteriaStep];
-
-            var criteriaStep = await _context.CriteriaSteps
-                .Include(cs => cs.CriteriaStepValues)
-                .FirstOrDefaultAsync(cs => cs.Id == step.Id);
-
-            if (criteriaStep == null)
-            {
-                await client.SendMessage(
-                    chatId: message.Chat.Id,
-                    text: "Ошибка: критерий поиска не найден.",
-                    cancellationToken: cancellationToken);
-                return;
-            }
-
-            // Состояние ожидания кастомного значения критерия
-            if (user.State == UserState.AwaitingCustomValue)
-            {
-                //await _userRepository.AddOrUpdateUserCriteriaAsync(
-                //    user.Id,
-                //    step.Id,
-                //    null, // Нет выбранного значения из списка
-                //    message.Text); // Сохраняем текст как кастомное значение
-                user = await _userCacheService.UpdateUserCriteriaAsync(
-                    user.TelegramId,
-                    step.Id,
-                    null, // Нет выбранного значения из списка
-                    message.Text); // Сохраняем текст как кастомное значение
-
-                user.State = UserState.AwaitingCriteria;
-                user.LastUpdated = DateTime.UtcNow;
-                await _userCacheService.SetUserAsync(user);
-                //await _userRepository.AddOrUpdateUserAsync(user);
-            }
-            else
-            {
-                var selectedValue = criteriaStep.CriteriaStepValues
-                    .FirstOrDefault(csv => csv.Prompt == message.Text);
-
-                if (selectedValue == null && !step.IsCustom)
-                {
-                    // Если значение не найдено и IsCustom = false, повторяем запрос
-                    await client.SendMessage(
-                        chatId: message.Chat.Id,
-                        text: "Пожалуйста, выберите значение из предложенных.",
-                        cancellationToken: cancellationToken);
-                    await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
-                    return;
-                }
-
-                //await _userRepository.AddOrUpdateUserCriteriaAsync(
-                //user.Id,
-                //step.Id,
-                //selectedValue?.Id);
-                user = await _userCacheService.UpdateUserCriteriaAsync(
-                    user.TelegramId,
-                    step.Id,
-                    selectedValue?.Id);
-            }
-
-            // Состояние точечной модификации критерия
-            if (user.State == UserState.AwaitingCriteriaEdit || user.IsSingle == true)
-            {
-                await ResetUserStateAsync(user);
-                await ShowUserCriteria(client, message, user, cancellationToken);
-            }
-            else
-            {
-                user.CurrentCriteriaStep++;
-                user.CurrentCriteriaStepValueIndex = 0;
-                user.LastUpdated = DateTime.UtcNow;
-                await _userCacheService.SetUserAsync(user);
-                //await _userRepository.AddOrUpdateUserAsync(user);
-
-                if (user.CurrentCriteriaStep >= _criteriaSteps.Count)
-                {
-                    await ResetUserStateAsync(user);
-
-                    await client.SendMessage(
-                        chatId: message.Chat.Id,
-                        text: "Ввод критериев завершен. Вы можете отредактировать их позже.",
-                        cancellationToken: cancellationToken);
-
-                    await ShowMainMenu(client, message.Chat.Id, cancellationToken);
-                    return;
-                }
-
-                await SendStepMessage(client, message.Chat.Id, user, cancellationToken);
-            }
-        }
-
-        private async Task ResetUserStateAsync(Domain.DataAccess.Model.User user)
-        {
-            // Обнуляем состояние юзера
             user.State = UserState.None;
             user.CurrentCriteriaStep = 0;
             user.CurrentCriteriaStepValueIndex = 0;
@@ -488,20 +435,19 @@ namespace Bot.Application.Handlers
             user.IsSingle = false;
             await _userCacheService.SetUserAsync(user);
             await _userCacheService.SyncToDatabaseAsync(user);
-            //await _userRepository.AddOrUpdateUserAsync(user);
         }
 
         private async Task HandleSubscription(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
         {
             await client.SendMessage(
                 chatId: message.Chat.Id,
-                text: "Функция подписки пока недоступна.",
+        text: "Функция подписки пока недоступна.",
                 cancellationToken: cancellationToken);
 
             await ShowMainMenu(client, message.Chat.Id, cancellationToken);
         }
 
-        private async Task ShowUserCriteria(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
+        public async Task ShowUserCriteria(ITelegramBotClient client, Message message, Domain.DataAccess.Model.User user, CancellationToken cancellationToken)
         {
             if (_criteriaSteps == null || !_criteriaSteps.Any())
             {
@@ -537,7 +483,7 @@ namespace Bot.Application.Handlers
                     }
                     else if (userValue.CriteriaStepValue != null)
                     {
-                        valueText = userValue.CriteriaStepValue.Prompt ?? "Не указано";
+                        valueText = userValue.CriteriaStepValue.Prompt;
                     }
                     else
                     {
@@ -600,7 +546,6 @@ namespace Bot.Application.Handlers
                     user.IsSingle = true;
                     user.LastUpdated = DateTime.UtcNow;
                     await _userCacheService.SetUserAsync(user);
-                    //await _userRepository.AddOrUpdateUserAsync(user);
 
                     await SendStepMessage(client, callbackQuery.Message.Chat.Id, user, cancellationToken);
                 }
@@ -631,13 +576,11 @@ namespace Bot.Application.Handlers
 
                 try
                 {
-                    // "печатает..."
                     await client.SendChatAction(
                         chatId: message.Chat.Id,
                         action: ChatAction.Typing,
                         cancellationToken: cancellationToken);
 
-                    // Если это первый запрос или нужно обновить результаты
                     if (user.CurrentCriteriaStepValueIndex <= 1 || user.State != UserState.SearchingVacancies)
                     {
                         var request = await CreateRequestFromUser(user);
@@ -661,7 +604,6 @@ namespace Bot.Application.Handlers
                             return;
                         }
 
-                        // Сбрасываем индекс на первую страницу при новом поиске
                         user.CurrentCriteriaStepValueIndex = 1;
                     }
 
@@ -699,13 +641,11 @@ namespace Bot.Application.Handlers
                             parseMode: ParseMode.Html,
                             cancellationToken: cancellationToken);
 
-                        // Задержечка
                         await Task.Delay(300, cancellationToken);
                     }
 
                     var keyboard = new List<KeyboardButton[]>();
 
-                    // Имитируем пагинацию
                     var nextPageVacancies = await _vacancyService.GetVacanciesPage(user.TelegramId, page + 1);
                     bool hasNext = nextPageVacancies.Any();
 
@@ -817,4 +757,3 @@ namespace Bot.Application.Handlers
         }
     }
 }
-
