@@ -19,3 +19,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+## Third-Party Data Sources
+
+This project uses the HeadHunter API (https://api.hh.ru/) for educational purposes only.
+
+Vacancy data is sourced from hh.ru and used in unmodified form according to the 
+HeadHunter Developer Agreement: https://dev.hh.ru/admin/developer_agreement
+
+The HeadHunter API is provided by HeadHunter Ltd and is subject to their terms of service.
