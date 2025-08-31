@@ -4,6 +4,7 @@
 @biktashevtimur
 @marinesque
 
+Разработка в рамках учебного проекта курса OTUS "C# Developer. Professional".
 
 # 🤖 Telegram Bot для поиска вакансий
 
