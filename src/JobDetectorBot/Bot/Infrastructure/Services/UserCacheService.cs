@@ -172,6 +172,7 @@ namespace Bot.Infrastructure.Services
             long criteriaStepId,
             long? criteriaStepValueId = null,
             string? customValue = null)
+
         {
             _logger.LogDebug("Обновление критериев пользователя {UserId}. CriteriaStepId: {CriteriaStepId}, ValueId: {ValueId}, CustomValue: {CustomValue}",
                 userId, criteriaStepId, criteriaStepValueId, customValue);
