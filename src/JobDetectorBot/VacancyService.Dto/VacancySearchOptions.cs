@@ -32,5 +32,19 @@ namespace VacancyService.Dto
 		/// Уровень дохода
 		/// </summary>
 		public int? Salary { get;  set; }
+
+		/// <summary>
+		/// Регион
+		/// </summary>
+		public string Region { get; set; }
+
+		/// <summary>
+		/// Страница
+		/// </summary>
+		public int Page { get; set; }
+
+		public bool? UseSimilarNames { get; set; }
+
+		public DateTime? DateTime { get; set; }
 	}
 }

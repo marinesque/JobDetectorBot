@@ -22,6 +22,9 @@ namespace VacancyService.DataAccess.Repository
 		Task DeleteAsync(string id, CancellationToken token = default);
 
 		Task<List<Vacancy>> GetAllBySearchString(string search, DbSearchOptions dbSearchOptions, CancellationToken token = default);
-		Task<List<Vacancy>> GetAllBySearchString(List<string> vacancyNames, DbSearchOptions dbSearchOptions, CancellationToken token = default);
+
+		Task<List<Vacancy>> GetAllBySearchString(Dictionary<string, List<string>> vacancyNames, DbSearchOptions dbSearchOptions, CancellationToken token = default);
+
+		Task<List<string>> GetAllByExternalIdsAsync(List<string> externalIds, CancellationToken token = default);
 	}
 }
