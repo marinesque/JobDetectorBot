@@ -90,6 +90,10 @@ namespace VacancyService.DataAccess.Model
 		[BsonElement("workschedule")]
 		public List<WorkScheduleByDay> WorkScheduleByDays { get; set; }
 
+
+		[BsonElement("professional_roles")]
+		public List<ProfessionalRole> ProfessionalRoles { get; set; }
+
 		/// <summary>
 		/// Требования
 		/// </summary>

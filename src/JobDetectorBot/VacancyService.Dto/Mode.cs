@@ -3,9 +3,9 @@ namespace VacancyService.Dto
 { 
     public class Mode
     {
-        public string Id;
+        public string Id { get; set; }
 
-        public string Name;
-    }
+        public string Name { get; set; }
+	}
 
 }

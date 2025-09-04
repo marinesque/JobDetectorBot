@@ -22,17 +22,6 @@ namespace VacancyService.Controllers
 			_vacancyService = vacancyService;
 		}
 
-		//[HttpPost(Name = "InsertVacancy")]
-		//public async Task InsertVacancy(VacancyCreateRequest vacancy)
-		//{
-		//	await _vacancyService.AddAsync(vacancy);
-		//}
-
-		//[HttpGet(Name = "GetVacancies")]
-		//public async Task<List<VacancyResponse>> GetVacancies()
-		//{
-		//	return await _vacancyService.GetAllAsync();
-		//}
 
 		[HttpGet("{search}", Name = "GetVacancies")]
 		public async Task<List<VacancyResponse>> GetVacancies(
@@ -54,6 +43,27 @@ namespace VacancyService.Controllers
 			};
 
 			return await _vacancyService.FindVacancy(search, searchOptions);
+		}
+
+		[HttpPost(Name = "GetVacanciesByPage")]
+		public async Task<List<VacancyResponse>> GetVacanciesByPage(
+			VacancyRequest vacancyRequest
+			)
+		{
+			var searchOptions = new VacancySearchOptions
+			{
+				Employment = vacancyRequest.Employment,
+				Experience = vacancyRequest.Experience,
+				Salary = vacancyRequest.Salary,
+				SalaryRangeFrequency = vacancyRequest.SalaryRangeFrequency,
+				Schedule = vacancyRequest.Schedule,
+				Region = vacancyRequest.Region,
+				Page = vacancyRequest.Page,
+				UseSimilarNames = vacancyRequest.UseSimilarNames ?? true,
+				DateTime = DateTime.UtcNow
+			};
+
+			return await _vacancyService.FindVacancy(vacancyRequest.Search, searchOptions);			
 		}
 
 	}

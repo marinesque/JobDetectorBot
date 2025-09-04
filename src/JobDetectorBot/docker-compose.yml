@@ -31,8 +31,47 @@ services:
     networks:
       - bot-network
 
+  mongo:
+    image: mongo:7.0
+    container_name: mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7.2
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  vacancyservice:
+    build:
+      context: .
+      dockerfile: VacancyService/Dockerfile
+    container_name: vacancyservice
+    restart: always
+    ports:
+      - "5000:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Mongo__ConnectionString=mongodb://root:example@mongo:27017
+      - Redis__Connection=redis:6379
+    depends_on:
+      - mongo
+      - redis
+
 volumes:
   postgres_data:
+  mongo_data:
+  redis_data:
 
 networks:
   bot-network:

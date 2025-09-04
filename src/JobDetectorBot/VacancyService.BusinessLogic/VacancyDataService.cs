@@ -1,4 +1,6 @@
-﻿using MongoDB.Driver;
+﻿using Microsoft.VisualBasic;
+using MongoDB.Driver;
+using StackExchange.Redis;
 using System.Data;
 using System.Net.Http.Headers;
 using System.Xml.Linq;
@@ -7,6 +9,7 @@ using VacancyService.DataAccess.Repository;
 using VacancyService.Dto;
 using VacancyService.HeadHunterApiClient;
 using VacancyService.HeadHunterApiClient.Dto;
+using VacancyService.HeadHunterApiClient.Dto.VacancyPositions;
 
 namespace VacancyService.BusinessLogic
 {
@@ -15,12 +18,15 @@ namespace VacancyService.BusinessLogic
 
 		private readonly IVacancyRepository _vacancyRepository;
 		private readonly IServiceClient _hhClient;
+		private readonly IRedisQueryStore _redisQueryStore;
 
 		public VacancyDataService(IVacancyRepository vacancyRepository,
-			IServiceClient hhClient)
+			IServiceClient hhClient,
+			IRedisQueryStore redisQueryStore)
 		{
 			_vacancyRepository = vacancyRepository;
 			_hhClient = hhClient;
+			_redisQueryStore = redisQueryStore;
 		}
 
 		public async Task DeleteAsync(string id)
@@ -28,63 +34,75 @@ namespace VacancyService.BusinessLogic
 			await _vacancyRepository.DeleteAsync(id);
 		}
 
+		private List<VacancyResponse> MapVacanciesToResponse(List<Vacancy> vacancies)
+		{
+			return vacancies.Select(x => new VacancyResponse
+			{
+				Address = x.Address?.Raw,
+				Archived = x.Archived,
+				Area = x.Area?.Name,
+				CreatedVacancyDate = x.CreatedVacancyDate,
+				Employer = x.Employer?.Name,
+				Employment = MapEmploymentDto(x.Employment),
+				EmploymentForm = MapEmploymentFormDto(x.EmploymentForm),
+				ExternalId = x.ExternalId,
+				Link = x.Link,
+				Name = x.Name,
+				PublishedVacancyDate = x.PublishedVacancyDate,
+				ProfessionalRoles = x.ProfessionalRoles?.Select(s => s.Name).ToList(),
+				Requirement = x.Requirement,
+				Responsibility = x.Responsibility,
+				Salary = MapSalaryDto(x.Salary),
+				Schedule = x.Schedule?.Name,
+				Type = x.Type?.Name,
+				UniqName = x.UniqName,
+				WorkExperience = MapWorkExperienceDto(x.WorkExperience),
+				WorkFormat = x.WorkFormat?.Select(z => z.Name).ToList(),
+				WorkingHours = x.WorkingHours?.Select(z => z.Name).ToList(),
+				WorkScheduleByDays = x.WorkScheduleByDays?.Select(z => z.Name).ToList()
+			}).ToList();
+		}
+
+		private async Task<List<Vacancy>> GetVacanciesFromDb(string search, DbSearchOptions dbSearchOptions, Dictionary<string, List<string>>? vacancyNames, VacancyPosition? vacancyPositions)
+		{
+			if ((dbSearchOptions.UseSimilarNames.HasValue && dbSearchOptions.UseSimilarNames.Value) && (vacancyNames != null && vacancyNames.Any()))
+				return await _vacancyRepository.GetAllBySearchString(vacancyNames, dbSearchOptions);
+			else
+				return await _vacancyRepository.GetAllBySearchString(search, dbSearchOptions);
+		}
+
 		public async Task<List<VacancyResponse>> FindVacancy(string search, VacancySearchOptions searchOptions)
 		{
 			DbSearchOptions dbSearchOptions = Map(searchOptions);
-
 			Dictionary<string, string> hhSearchOptions = CreateHeadHunterSearchOptions(searchOptions);
 
 			Root hhResult;
-			List<Vacancy> vacanciesInDb;
+			List<Vacancy> vacanciesInLocalDb;
 
-			var vacancyPositions = await _hhClient.GetVacancyPositions(search);
-
-			if (vacancyPositions?.Items?.Any() == true)
+			if (await _redisQueryStore.TryGetValueAsync(search.Trim().ToLowerInvariant()))
 			{
-				List<string> vacancyNames = vacancyPositions?.Items?.Select(s => s.Text).ToList();
+				var vacancyPositions = await _hhClient.GetVacancyPositions(search);
+				var vacancyNames = vacancyPositions?.Items?.ToDictionary(s => s.Text, s => s.ProfessionalRoles.Select(x => x.Id).ToList())
+					?? new Dictionary<string, List<string>>();
+				vacancyNames.TryAdd(search, vacancyPositions?.Items?.SelectMany(s => s.ProfessionalRoles).Select(x => x.Id).ToList());
 
-				vacanciesInDb = await _vacancyRepository.GetAllBySearchString(vacancyNames, dbSearchOptions);
-			}
-			else
-			{
-				vacanciesInDb = await _vacancyRepository.GetAllBySearchString(search, dbSearchOptions);
-			}
+				vacanciesInLocalDb = await GetVacanciesFromDb(search, dbSearchOptions, vacancyNames, vacancyPositions);
 
-			if(vacanciesInDb.Any())
-			{
-				return vacanciesInDb.Select(x => new VacancyResponse
+				if (vacanciesInLocalDb.Any())
 				{
-					Address = x.Address?.Raw,
-					Archived = x.Archived,
-					Area = x.Area?.Name,
-					CreatedVacancyDate = x.CreatedVacancyDate,
-					Employer = x.Employer?.Name,
-					Employment = MapEmploymentDto(x.Employment),
-					EmploymentForm = MapEmploymentFormDto(x.EmploymentForm),
-					ExternalId = x.ExternalId,
-					Link = x.Link,
-					Name = x.Name,
-					PublishedVacancyDate = x.PublishedVacancyDate,
-					Requirement = x.Requirement,
-					Responsibility = x.Responsibility,
-					Salary = MapSalaryDto(x.Salary),
-					Schedule = x.Schedule?.Name,
-					Type = x.Type?.Name,
-					UniqName = x.UniqName,
-					WorkExperience = MapWorkExperienceDto(x.WorkExperience),
-					WorkFormat = x.WorkFormat?.Select(z => z.Name).ToList(),
-					WorkingHours = x.WorkingHours?.Select(z => z.Name).ToList(),
-					WorkScheduleByDays = x.WorkScheduleByDays?.Select(z => z.Name).ToList()
-				}).ToList();
+					return MapVacanciesToResponse(vacanciesInLocalDb);
+				}
 			}
-			else
+
+			hhResult = await _hhClient.GetVacancies(search, hhSearchOptions);
+
+			if (hhResult != null && hhResult.Items.Any())
 			{
+				_redisQueryStore.SaveKeyValueAsync(search.Trim().ToLowerInvariant(), search.Trim().ToLowerInvariant());
 
-				hhResult = await _hhClient.GetVacancies(search, hhSearchOptions);
-
-				if (hhResult != null)
-				{
-					await _vacancyRepository.BulkInsertAsync(hhResult.Items.Select(x => new Vacancy
+				List<Item> vacancies = await GetUniqVacancies(hhResult.Items);
+				if (vacancies.Any())
+					await _vacancyRepository.BulkInsertAsync(vacancies.Select(x => new Vacancy
 					{
 						Employer = MapEmployer(x.Employer),
 						CreatedVacancyDate = x.CreatedAt,
@@ -94,6 +112,7 @@ namespace VacancyService.BusinessLogic
 						Employment = MapEmployment(x.Employment),
 						Link = x.AlternateUrl,
 						Name = x.Name,
+						ProfessionalRoles = x.ProfessionalRoles.Select(s => MapProfessionalRole(s)).ToList(),
 						Salary = Map(x.SalaryRange),
 						Schedule = MapSchedule(x.Schedule),
 						WorkExperience = Map(x.Experience),
@@ -109,72 +128,43 @@ namespace VacancyService.BusinessLogic
 						Type = MapType(x.Type),
 						ExternalId = x.Id
 					}).ToList());
-				}
 
-				return hhResult?.Items?.Select(x => new VacancyResponse
-				{
-					Address = x.Address?.Raw,
-					Archived = x.Archived,
-					Area = x.Area?.Name,
-					CreatedVacancyDate = x.CreatedAt,
-					Employer = x.Employer?.Name,
-					Employment = MapEmploymentDto(x.Employment),
-					EmploymentForm = MapEmploymentFormDto(x.EmploymentForm),
-					ExternalId = x.Id,
-					Link = x.AlternateUrl,
-					Name = x.Name,
-					PublishedVacancyDate = x.PublishedAt,
-					Requirement = x.Snippet?.Requirement,
-					Responsibility = x.Snippet?.Responsibility,
-					Salary = MapSalaryRange(x.SalaryRange),
-					Schedule = x.Schedule?.Name,
-					Type = x.Type?.Name,
-					UniqName = $"hh_{x.Id}",
-					WorkExperience = MapWorkExperience(x.Experience),
-					WorkFormat = x.WorkFormat?.Select(z => z.Name).ToList(),
-					WorkingHours = x.WorkingHours?.Select(z => z.Name).ToList(),
-					WorkScheduleByDays = x.WorkScheduleByDays?.Select(z => z.Name).ToList()
-				}).ToList();
+				var vacancyPositions = await _hhClient.GetVacancyPositions(search);
+				var vacancyNames = vacancyPositions?.Items?.ToDictionary(s => s.Text, s => s.ProfessionalRoles.Select(x => x.Id).ToList())
+					?? new Dictionary<string, List<string>>();
+				vacancyNames.TryAdd(search, vacancyPositions?.Items?.SelectMany(s => s.ProfessionalRoles).Select(x => x.Id).ToList());
+
+				vacanciesInLocalDb = await GetVacanciesFromDb(search, dbSearchOptions, vacancyNames, vacancyPositions);
+				return vacanciesInLocalDb.Any() ? MapVacanciesToResponse(vacanciesInLocalDb) : new List<VacancyResponse>();
 			}
 
+			return new List<VacancyResponse>();
 
+		}
 
-			//if (vacanciesInDb.Any())
-			//{
+		private async Task<List<Item>> GetUniqVacancies(List<Item> vacanciesFromHh)
+		{
+			List<string> vacancyIds = vacanciesFromHh.Select(v => v.Id).Where(id => !string.IsNullOrEmpty(id)).ToList();
+			List<string> existingVacancies = await _vacancyRepository.GetAllByExternalIdsAsync(vacancyIds);
+			var existingIds = new HashSet<string>(existingVacancies);
 
-			//	hhResult = await _hhClient.GetVacancies(search, hhSearchOptions);
+			return vacanciesFromHh.Where(v => !existingIds.Contains(v.Id)).ToList();
+		}
 
-			//	if(vacanciesInDb.Count < hhResult.Items.Count)
-			//	{
-			//		TryAddNewItems(vacanciesInDb, hhResult.Items);
-			//		vacanciesInDb = await _vacancyRepository.GetAllBySearchString(search, dbSearchOptions);
-			//	}
+		private DataAccess.Model.ProfessionalRole MapProfessionalRole(HeadHunterApiClient.Dto.ProfessionalRole professionalRole)
+		{
+			if (professionalRole == null) return null;
 
-			//	return vacanciesInDb.Select(x => new VacancyResponse
-			//	{
-			//		Company = x.Company,
-			//		CreatedVacancyDate = x.CreatedVacancyDate,
-			//		Requirement = x.Requirement,
-			//		Responsibility = x.Responsibility,
-			//		Employment = x.Employment,
-			//		Link = x.Link,
-			//		Name = x.Name,
-			//		Salary = Map(x.Salary),
-			//		Schedule = x.Schedule,
-			//		WorkExperience = Map(x.WorkExperience),
-			//		WorkFormat = x.WorkFormat,
-			//		WorkingHours = x.WorkingHours,
-			//		WorkScheduleByDays = x.WorkScheduleByDays,
-			//		UniqName = x.UniqName,
-			//	}).ToList();
-			//}
-			//else
-			//{
+			return new DataAccess.Model.ProfessionalRole
+			{
+				Id = professionalRole.Id,
+				Name = professionalRole.Name,
+			};
+		}
 
-			//}
-
-
-
+		private List<DataAccess.Model.ProfessionalRole> MapProfessionalRoles(List<HeadHunterApiClient.Dto.ProfessionalRole> professionalRoles)
+		{
+			throw new NotImplementedException();
 		}
 
 		private Dto.SalaryRange MapSalaryRange(HeadHunterApiClient.Dto.SalaryRange salaryRange)
@@ -506,7 +496,11 @@ namespace VacancyService.BusinessLogic
 				Experience = searchOptions.Experience,
 				Salary = searchOptions.Salary,
 				SalaryRangeFrequency = searchOptions.SalaryRangeFrequency,
-				Schedule = searchOptions.Schedule
+				Schedule = searchOptions.Schedule,
+				Page = searchOptions.Page,
+				Region = searchOptions.Region,
+				UseSimilarNames = searchOptions.UseSimilarNames,
+				DateTime = searchOptions.DateTime
 			};
 		}
 
@@ -541,7 +535,9 @@ namespace VacancyService.BusinessLogic
 						case "Salary":
 							dict.Add("salary", option);
 							break;
-
+						case "Region":
+							dict.Add("region", option);
+							break;
 						default:
 							continue;
 					}
@@ -590,11 +586,11 @@ namespace VacancyService.BusinessLogic
 			};
 		}
 
-		private Dto.SalaryRange MapSalaryDto(DataAccess.Model.SalaryRange? salary)
+		private VacancyService.Dto.SalaryRange MapSalaryDto(DataAccess.Model.SalaryRange? salary)
 		{
 			if (salary == null) return null;
 
-			return new Dto.SalaryRange
+			return new VacancyService.Dto.SalaryRange
 			{
 				Currency = salary.Currency,
 				Frequency = MapFrequencyDto(salary.Frequency),

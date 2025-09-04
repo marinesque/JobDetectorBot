@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
 using System;
 using VacancyService.HeadHunterApiClient;
+using StackExchange.Redis;
 
 namespace VacancyService
 {
@@ -31,6 +32,10 @@ namespace VacancyService
 			services.Configure<MongoDBSettings>(Configuration.GetSection("MongoDBSettings"));
 
 			services.AddTransient(typeof(IServiceClient), typeof(ServiceClient));
+			
+			var redisConfig = Configuration.GetSection("Redis")["ConnectionString"];
+			services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConfig));
+			services.AddTransient<IRedisQueryStore, RedisQueryStore>();
 		}
 
 		public void Configure(IApplicationBuilder app)

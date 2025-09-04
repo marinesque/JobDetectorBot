@@ -23,15 +23,6 @@ namespace VacancyService
 
 			builder.Services.Configure<HeadHunterSettings>(builder.Configuration.GetSection("HeadHunterSettings"));
 
-			//var mongoDBSettings = builder.Configuration.GetSection("MongoDBSettings").Get<MongoDBSettings>();
-
-			var hhClientId = builder.Configuration["HeadHunter:ClientId"];
-
-			var hhClientSecret = builder.Configuration["HeadHunter:ClientSecret"];
-
-			//builder.Services.AddDbContext<VacancyDbContext>(options =>
-			//	options.UseMongoDB(mongoDBSettings.ConnectionString ?? "", mongoDBSettings.DatabaseName ?? ""));
-
 			var startup = new Startup(builder.Configuration);
 			
 			startup.ConfigureServices(builder.Services);

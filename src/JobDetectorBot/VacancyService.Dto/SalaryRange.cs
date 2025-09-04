@@ -3,17 +3,17 @@ namespace VacancyService.Dto
 { 
     public class SalaryRange
     {
-        public int? From;
+        public int? From { get; set; }
 
-        public int? To;
+        public int? To { get; set; }
 
-        public string Currency;
+		public string Currency { get; set; }
 
-        public bool? Gross;
+		public bool? Gross { get; set; }
 
-        public Mode Mode;
+		public Mode Mode { get; set; }
 
-        public Frequency Frequency;
-    }
+		public Frequency Frequency { get; set; }
+	}
 
 }
