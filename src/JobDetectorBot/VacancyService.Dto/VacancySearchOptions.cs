@@ -41,7 +41,7 @@ namespace VacancyService.Dto
 		/// <summary>
 		/// Страница
 		/// </summary>
-		public int Page { get; set; }
+		public int? Page { get; set; }
 
 		public bool? UseSimilarNames { get; set; }
 

@@ -20,9 +20,9 @@ namespace VacancyService.Dto
 		
 		public int? Salary { get; set; }
 
-		public string Region { get; set; }
+		public string? Region { get; set; }
 
-		public int Page { get; set; }
+		public int? Page { get; set; }
 
 		public bool? UseSimilarNames { get; set; }
 	}

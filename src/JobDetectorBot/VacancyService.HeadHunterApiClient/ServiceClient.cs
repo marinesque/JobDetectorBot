@@ -11,10 +11,19 @@ namespace VacancyService.HeadHunterApiClient
 {
 	public class ServiceClient : IServiceClient
 	{
-		HttpClient _httpClient;
+		private readonly HttpClient _httpClient;
+		private readonly string baseUrl;
+		private readonly string apiKey;
 
 		public ServiceClient(IHttpClientFactory httpClientFactory)
 		{
+			_httpClient = httpClientFactory?.CreateClient();
+		}
+
+		public ServiceClient(string baseUrl, string apiKey, IHttpClientFactory httpClientFactory)
+		{
+			this.baseUrl = baseUrl;
+			this.apiKey = apiKey;
 			_httpClient = httpClientFactory?.CreateClient();
 		}
 
